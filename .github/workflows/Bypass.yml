@@ -2,6 +2,11 @@ name: Generate Bypass Architecture Document
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "Bypass.md"
+      - "docs/**"
+      - ".github/workflows/Bypass.yml"
 
 permissions:
   contents: write
@@ -15,225 +20,109 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Generate Bypass.md
+        shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          content = """# Bypass iOS — Architecture Research Reference
+          path = Path("Bypass.md")
 
-          > Architecture research document for Device Service Platform,
-          > Device Intelligence, Eligibility, Authorization, Entitlement,
-          > Workflow, API and Security Architecture.
+          if not path.exists():
+              raise SystemExit("Bypass.md does not exist")
 
-          ## Canonical Flow
-
-          Identity
-            ↓
-          Capability
-            ↓
-          Policy
-            ↓
-          Authorization
-            ↓
-          Entitlement
-            ↓
-          Execution
-            ↓
-          Evidence
-
-          ## Platform Architecture
-
-          USER
-            ↓
-          WEB / CLIENT
-            ↓
-          API GATEWAY
-            ↓
-          DEVICE SERVICE
-            ↓
-          DEVICE REGISTRY
-            ↓
-          DEVICE INTELLIGENCE
-            ↓
-          ELIGIBILITY ENGINE
-            ↓
-          AUTHORIZATION
-            ↓
-          ENTITLEMENT
-            ↓
-          SERVICE WORKFLOW
-            ↓
-          AUDIT / EVIDENCE
-
-          ## Device Intelligence
-
-          Device
-          - device_id
-          - platform
-          - model
-          - hardware_class
-          - os_version
-          - firmware_version
-          - protected_identity
-          - capabilities
-          - authorization_state
-          - service_state
-
-          ## Eligibility Engine
-
-          Device Identity
-          +
-          Hardware Capability
-          +
-          OS / Firmware
-          +
-          Service Requirements
-          +
-          Policy
-          +
-          Authorization
-          =
-          Eligibility Decision
-
-          Possible results:
-
-          - ELIGIBLE
-          - INELIGIBLE
-          - UNSUPPORTED
-          - REQUIRES_AUTHORIZATION
-          - REQUIRES_OWNER_ACTION
-          - REQUIRES_SUPPORT
-
-          ## Backend Services
-
-          - API Gateway
-          - Authentication Service
-          - Device Service
-          - Device Registry
-          - Eligibility Service
-          - Authorization Service
-          - Entitlement Service
-          - Order Service
-          - Payment Service
-          - Workflow Orchestrator
-          - Audit Service
-          - Support Service
-
-          ## Entitlement
-
-          Customer
-            ↓
-          Order
-            ↓
-          Product / Service
-            ↓
-          Authorized Device
-            ↓
-          Entitlement
-            ↓
-          Service Access
-
-          ## Security Architecture
-
-          Authentication
-            ↓
-          Authorization
-            ↓
-          Eligibility
-            ↓
-          Entitlement
-            ↓
-          Service Access
-            ↓
-          Audit
-
-          Security controls:
-
-          - Least privilege
-          - Server-side authorization
-          - Signed requests
-          - Short-lived tokens
-          - Rate limiting
-          - Replay protection
-          - Audit logging
-          - Encryption
-          - Data minimization
-          - Abuse detection
-
-          ## Audit / Evidence
-
-          Audit Event
-          - event_id
-          - actor
-          - device_id
-          - service_id
-          - action
-          - policy_decision
-          - authorization_result
-          - timestamp
-          - correlation_id
-          - result
-
-          ## Research OS Mapping
-
-          | Device Platform | Research OS / Enterprise |
-          |---|---|
-          | Device Registry | Resource Registry |
-          | Device Intelligence | Resource Intelligence |
-          | Hardware Matrix | Capability Matrix |
-          | Eligibility Engine | Policy / Decision Engine |
-          | Authorization | Access Control |
-          | License | Entitlement |
-          | Order | Provisioning Request |
-          | Client Tool | Edge Agent |
-          | Workflow | Orchestrated Job |
-          | Audit | Evidence Ledger |
-          | Reseller API | Partner Integration |
-
-          ## Research Boundary
-
-          This repository is for architecture and defensive security research.
-
-          It does not contain:
-
-          - Activation Lock bypass instructions
-          - Passcode bypass instructions
-          - MDM authorization circumvention
-          - Credential theft
-          - Unauthorized device access
-          - Exploit implementation
-          - Security-control evasion
-
-          ## Final Principle
-
-          Identity → Capability → Policy → Authorization → Entitlement → Execution → Evidence
-          """
-
-          Path("Bypass.md").write_text(
-              content.lstrip(),
-              encoding="utf-8"
-          )
-
-          print("Generated Bypass.md")
+          print(f"Using existing canonical document: {path}")
+          print(f"Size: {path.stat().st_size} bytes")
           PY
 
-      - name: Validate Bypass.md
+      - name: Validate Architecture v2
+        shell: bash
         run: |
-          test -s Bypass.md
-          echo "Validation passed"
-          echo "Lines: $(wc -l < Bypass.md)"
+          set -euo pipefail
 
-      - name: Commit changes
+          echo "=== Architecture v2 CI Gate ==="
+
+          required_files=(
+            "Bypass.md"
+            "docs/API_CONTRACT.md"
+            "docs/DECISION_MODEL.md"
+            "docs/DATA_MODEL.md"
+            "docs/THREAT_MODEL.md"
+            "docs/VERIFICATION_MATRIX.md"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ ! -s "$file" ]; then
+              echo "ERROR: Missing or empty file: $file"
+              exit 1
+            fi
+            echo "PASS: $file"
+          done
+
+          echo "=== Canonical Architecture Checks ==="
+
+          grep -q "Identity" Bypass.md
+          grep -q "Capability" Bypass.md
+          grep -q "Policy" Bypass.md
+          grep -q "Authorization" Bypass.md
+          grep -q "Entitlement" Bypass.md
+          grep -q "Execution" Bypass.md
+          grep -q "Evidence" Bypass.md
+
+          echo "PASS: Canonical flow"
+
+          echo "=== Security Boundary Checks ==="
+
+          grep -qi "server-side authorization" docs/API_CONTRACT.md
+          grep -qi "client" docs/DECISION_MODEL.md
+          grep -qi "Research Boundary" docs/THREAT_MODEL.md
+
+          echo "PASS: Security boundary"
+
+          echo "=== Verification Matrix ==="
+
+          grep -q "Authentication" docs/VERIFICATION_MATRIX.md
+          grep -q "Authorization" docs/VERIFICATION_MATRIX.md
+          grep -q "Replay Protection" docs/VERIFICATION_MATRIX.md
+          grep -q "Audit" docs/VERIFICATION_MATRIX.md
+
+          echo "PASS: Verification matrix"
+
+          echo "=== Architecture v2 CI Gate: PASS ==="
+
+      - name: Check Markdown files
+        shell: bash
         run: |
+          set -euo pipefail
+
+          for file in \
+            Bypass.md \
+            docs/API_CONTRACT.md \
+            docs/DECISION_MODEL.md \
+            docs/DATA_MODEL.md \
+            docs/THREAT_MODEL.md \
+            docs/VERIFICATION_MATRIX.md
+          do
+            if grep -n $'\r' "$file" >/dev/null 2>&1; then
+              echo "WARNING: CRLF detected in $file"
+            fi
+          done
+
+          echo "Markdown inspection complete."
+
+      - name: Commit generated changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add Bypass.md
+          git add Bypass.md docs/
 
           if git diff --cached --quiet; then
-            echo "No changes"
+            echo "No generated documentation changes."
             exit 0
           fi
 
-          git commit -m "docs: generate Bypass architecture reference"
-          git push
+          git commit -m "docs: update architecture research reference"
+          git push origin HEAD:main
