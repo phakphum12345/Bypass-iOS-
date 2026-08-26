@@ -72,9 +72,33 @@ jobs:
 
           echo "=== Security Boundary Checks ==="
 
-          grep -qi "Authorization MUST be evaluated server-side" docs/API_CONTRACT.md
-          grep -qi "client" docs/DECISION_MODEL.md
-          grep -qi "Research Boundary" docs/THREAT_MODEL.md
+          security_pass=true
+
+          if grep -qi "Authorization MUST be evaluated server-side" docs/API_CONTRACT.md; then
+            echo "PASS: API server-side authorization"
+          else
+            echo "FAIL: API server-side authorization"
+            security_pass=false
+          fi
+
+          if grep -qi "client" docs/DECISION_MODEL.md; then
+            echo "PASS: Client decision boundary"
+          else
+            echo "FAIL: Client decision boundary"
+            security_pass=false
+          fi
+
+          if grep -qi "Research Boundary" docs/THREAT_MODEL.md; then
+            echo "PASS: Research boundary"
+          else
+            echo "FAIL: Research boundary"
+            security_pass=false
+          fi
+
+          if [ "$security_pass" != "true" ]; then
+            echo "ERROR: Security boundary checks failed"
+            exit 1
+          fi
 
           echo "PASS: Security boundary"
 
