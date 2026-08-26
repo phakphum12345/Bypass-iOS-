@@ -1,0 +1,254 @@
+name: Phase 4 Architecture Continuation
+
+on:
+  push:
+    branches:
+      - main
+      - 'phase/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  architecture:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect Flutter project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -d flutter_app ]; then
+            echo "ERROR: flutter_app not found"
+            exit 1
+          fi
+
+          cd flutter_app
+
+          test -d lib/core
+          test -d lib/core/models
+          test -d lib/core/services
+          test -d lib/core/pipeline
+          test -d lib/core/contracts
+
+          echo "PASS: Flutter architecture directories"
+
+      - name: Reconcile Phase 4 files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd flutter_app
+
+          mkdir -p lib/core/pipeline
+          mkdir -p lib/core/contracts
+          mkdir -p docs/architecture
+
+          cat > lib/core/contracts/decision_pipeline_contract.dart <<'DART'
+          import '../models/authorization.dart';
+          import '../models/device.dart';
+          import '../models/entitlement.dart';
+          import '../models/evidence.dart';
+          import '../models/policy.dart';
+
+          class DecisionPipelineInput {
+            final Policy policy;
+            final Device device;
+            final AuthorizationRequest authorizationRequest;
+            final EntitlementRequest entitlementRequest;
+            final EvidenceRequest evidenceRequest;
+
+            const DecisionPipelineInput({
+              required this.policy,
+              required this.device,
+              required this.authorizationRequest,
+              required this.entitlementRequest,
+              required this.evidenceRequest,
+            });
+          }
+          DART
+
+          cat > lib/core/contracts/decision_pipeline_result.dart <<'DART'
+          import '../models/authorization.dart';
+          import '../models/decision.dart';
+          import '../models/entitlement.dart';
+          import '../models/evidence.dart';
+
+          class DecisionPipelineResult {
+            final Authorization authorization;
+            final Entitlement entitlement;
+            final Decision decision;
+            final Evidence evidence;
+
+            const DecisionPipelineResult({
+              required this.authorization,
+              required this.entitlement,
+              required this.decision,
+              required this.evidence,
+            });
+          }
+          DART
+
+          cat > lib/core/pipeline/decision_pipeline.dart <<'DART'
+          import '../contracts/decision_pipeline_contract.dart';
+          import '../contracts/decision_pipeline_result.dart';
+          import '../engine/decision_engine.dart';
+          import '../services/authorization_service.dart';
+          import '../services/entitlement_service.dart';
+          import '../services/evidence_service.dart';
+
+          class DecisionPipeline {
+            final DecisionEngine decisionEngine;
+            final AuthorizationService authorizationService;
+            final EntitlementService entitlementService;
+            final EvidenceService evidenceService;
+
+            const DecisionPipeline({
+              required this.decisionEngine,
+              required this.authorizationService,
+              required this.entitlementService,
+              required this.evidenceService,
+            });
+
+            DecisionPipelineResult execute(DecisionPipelineInput input) {
+              final authorization =
+                  authorizationService.authorize(
+                input.authorizationRequest,
+              );
+
+              final entitlement =
+                  entitlementService.resolve(
+                input.entitlementRequest,
+              );
+
+              final decision = decisionEngine.evaluate(
+                input.policy,
+                input.device,
+                authorization,
+                entitlement,
+              );
+
+              final evidence = evidenceService.record(
+                input.evidenceRequest,
+                decision,
+              );
+
+              return DecisionPipelineResult(
+                authorization: authorization,
+                entitlement: entitlement,
+                decision: decision,
+                evidence: evidence,
+              );
+            }
+          }
+          DART
+
+          cat > docs/architecture/DECISION_PIPELINE.md <<'MD'
+          # Decision Pipeline
+
+          ## Phase 4
+
+          The Decision Pipeline is the canonical integration boundary for:
+
+          1. Device context
+          2. Policy
+          3. Authorization
+          4. Entitlement
+          5. Decision Engine
+          6. Evidence
+
+          ## Flow
+
+          ```text
+          Device
+             ↓
+          Policy
+             ↓
+          Authorization Service
+             ↓
+          Entitlement Service
+             ↓
+          Decision Engine
+             ↓
+          Evidence Service
+             ↓
+          DecisionPipelineResult
+          ```
+
+          ## Validation Policy
+
+          Phase 4 implementation validation is intentionally deferred.
+
+          Final validation occurs only during FINAL GATE:
+
+          ```text
+          flutter format
+              ↓
+          flutter analyze
+              ↓
+          flutter test
+              ↓
+          release build
+              ↓
+          PROJECT COMPLETE
+          ```
+          MD
+
+          echo "PASS: Phase 4 canonical files written"
+
+      - name: Generate architecture documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd flutter_app
+
+          if [ -f ../tools/generate_architecture_docs.dart ]; then
+            dart ../tools/generate_architecture_docs.dart
+          else
+            echo "INFO: generator not present at repository root"
+          fi
+
+          test -f docs/architecture/DECISION_PIPELINE.md
+
+          echo "PASS: architecture documentation"
+
+      - name: Structural gate only
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd flutter_app
+
+          test -f lib/core/pipeline/decision_pipeline.dart
+          test -f lib/core/contracts/decision_pipeline_contract.dart
+          test -f lib/core/contracts/decision_pipeline_result.dart
+          test -f docs/architecture/DECISION_PIPELINE.md
+
+          echo "PASS: Phase 4 structural gate"
+          echo "NO flutter analyze"
+          echo "NO flutter test"
+          echo "NO release build"
+
+      - name: Commit generated architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet; then
+            echo "NO CHANGES"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add flutter_app/lib/core flutter_app/docs/architecture
+          git commit -m "chore: reconcile phase 4 decision pipeline"
+
+          git push
