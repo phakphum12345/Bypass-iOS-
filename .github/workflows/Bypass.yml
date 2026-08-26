@@ -72,7 +72,7 @@ jobs:
 
           echo "=== Security Boundary Checks ==="
 
-          grep -qi "server-side authorization" docs/API_CONTRACT.md
+          grep -qi "Authorization MUST be evaluated server-side" docs/API_CONTRACT.md
           grep -qi "client" docs/DECISION_MODEL.md
           grep -qi "Research Boundary" docs/THREAT_MODEL.md
 
