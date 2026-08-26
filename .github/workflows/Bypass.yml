@@ -2,44 +2,238 @@ name: Generate Bypass Architecture Document
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/workflows/generate-bypass-md.yml"
 
 permissions:
   contents: write
 
 jobs:
-  generate-bypass-md:
+  generate:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Generate Bypass.md
-        shell: bash
         run: |
-          cat > Bypass.md <<'EOF'
-# Bypass iOS — Architecture Research Reference
+          python3 - <<'PY'
+          from pathlib import Path
 
-> Architecture research document for Device Service Platform,
-> Device Intelligence, Eligibility, Authorization, Entitlement,
-> Workflow, API and Security Architecture.
+          content = """# Bypass iOS — Architecture Research Reference
 
-## Canonical Flow
+          > Architecture research document for Device Service Platform,
+          > Device Intelligence, Eligibility, Authorization, Entitlement,
+          > Workflow, API and Security Architecture.
 
-```text
-Identity
-  ↓
-Capability
-  ↓
-Policy
-  ↓
-Authorization
-  ↓
-Entitlement
-  ↓
-Execution
-  ↓
-Evidence
+          ## Canonical Flow
+
+          Identity
+            ↓
+          Capability
+            ↓
+          Policy
+            ↓
+          Authorization
+            ↓
+          Entitlement
+            ↓
+          Execution
+            ↓
+          Evidence
+
+          ## Platform Architecture
+
+          USER
+            ↓
+          WEB / CLIENT
+            ↓
+          API GATEWAY
+            ↓
+          DEVICE SERVICE
+            ↓
+          DEVICE REGISTRY
+            ↓
+          DEVICE INTELLIGENCE
+            ↓
+          ELIGIBILITY ENGINE
+            ↓
+          AUTHORIZATION
+            ↓
+          ENTITLEMENT
+            ↓
+          SERVICE WORKFLOW
+            ↓
+          AUDIT / EVIDENCE
+
+          ## Device Intelligence
+
+          Device
+          - device_id
+          - platform
+          - model
+          - hardware_class
+          - os_version
+          - firmware_version
+          - protected_identity
+          - capabilities
+          - authorization_state
+          - service_state
+
+          ## Eligibility Engine
+
+          Device Identity
+          +
+          Hardware Capability
+          +
+          OS / Firmware
+          +
+          Service Requirements
+          +
+          Policy
+          +
+          Authorization
+          =
+          Eligibility Decision
+
+          Possible results:
+
+          - ELIGIBLE
+          - INELIGIBLE
+          - UNSUPPORTED
+          - REQUIRES_AUTHORIZATION
+          - REQUIRES_OWNER_ACTION
+          - REQUIRES_SUPPORT
+
+          ## Backend Services
+
+          - API Gateway
+          - Authentication Service
+          - Device Service
+          - Device Registry
+          - Eligibility Service
+          - Authorization Service
+          - Entitlement Service
+          - Order Service
+          - Payment Service
+          - Workflow Orchestrator
+          - Audit Service
+          - Support Service
+
+          ## Entitlement
+
+          Customer
+            ↓
+          Order
+            ↓
+          Product / Service
+            ↓
+          Authorized Device
+            ↓
+          Entitlement
+            ↓
+          Service Access
+
+          ## Security Architecture
+
+          Authentication
+            ↓
+          Authorization
+            ↓
+          Eligibility
+            ↓
+          Entitlement
+            ↓
+          Service Access
+            ↓
+          Audit
+
+          Security controls:
+
+          - Least privilege
+          - Server-side authorization
+          - Signed requests
+          - Short-lived tokens
+          - Rate limiting
+          - Replay protection
+          - Audit logging
+          - Encryption
+          - Data minimization
+          - Abuse detection
+
+          ## Audit / Evidence
+
+          Audit Event
+          - event_id
+          - actor
+          - device_id
+          - service_id
+          - action
+          - policy_decision
+          - authorization_result
+          - timestamp
+          - correlation_id
+          - result
+
+          ## Research OS Mapping
+
+          | Device Platform | Research OS / Enterprise |
+          |---|---|
+          | Device Registry | Resource Registry |
+          | Device Intelligence | Resource Intelligence |
+          | Hardware Matrix | Capability Matrix |
+          | Eligibility Engine | Policy / Decision Engine |
+          | Authorization | Access Control |
+          | License | Entitlement |
+          | Order | Provisioning Request |
+          | Client Tool | Edge Agent |
+          | Workflow | Orchestrated Job |
+          | Audit | Evidence Ledger |
+          | Reseller API | Partner Integration |
+
+          ## Research Boundary
+
+          This repository is for architecture and defensive security research.
+
+          It does not contain:
+
+          - Activation Lock bypass instructions
+          - Passcode bypass instructions
+          - MDM authorization circumvention
+          - Credential theft
+          - Unauthorized device access
+          - Exploit implementation
+          - Security-control evasion
+
+          ## Final Principle
+
+          Identity → Capability → Policy → Authorization → Entitlement → Execution → Evidence
+          """
+
+          Path("Bypass.md").write_text(
+              content.lstrip(),
+              encoding="utf-8"
+          )
+
+          print("Generated Bypass.md")
+          PY
+
+      - name: Validate Bypass.md
+        run: |
+          test -s Bypass.md
+          echo "Validation passed"
+          echo "Lines: $(wc -l < Bypass.md)"
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add Bypass.md
+
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+
+          git commit -m "docs: generate Bypass architecture reference"
+          git push
