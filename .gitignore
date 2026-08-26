@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Flutter application sources
+!flutter_app/
+!flutter_app/lib/
+!flutter_app/lib/**
+!flutter_app/test/
+!flutter_app/test/**
