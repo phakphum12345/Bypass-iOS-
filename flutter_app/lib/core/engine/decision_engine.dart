@@ -1,5 +1,5 @@
-import '../models/decision.dart';
-import '../models/device.dart';
+import 'package:bypass_architecture_reference/core/models/decision.dart';
+import 'package:bypass_architecture_reference/core/models/device.dart';
 
 class DecisionEngine {
   const DecisionEngine();

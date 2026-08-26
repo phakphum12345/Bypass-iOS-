@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/core/engine/decision_engine.dart';
-import '../lib/core/models/decision.dart';
-import '../lib/core/models/device.dart';
+import 'package:bypass_architecture_reference/core/engine/decision_engine.dart';
+import 'package:bypass_architecture_reference/core/models/decision.dart';
+import 'package:bypass_architecture_reference/core/models/device.dart';
 
 void main() {
   test('authorized ready device is eligible', () {
