@@ -133,7 +133,8 @@ void main() {
     expect(boundary.canClientOverrideAuthorization(), isFalse);
   });
 
-  test('security boundary allows execution only for authorized state', () {
+  test('security boundary allows execution only for authoritative eligibility',
+      () {
     const boundary = SecurityBoundary();
 
     const authorized = AuthorizationResult(
@@ -148,8 +149,65 @@ void main() {
       reason: 'denied',
     );
 
-    expect(boundary.allowsExecution(authorized), isTrue);
-    expect(boundary.allowsExecution(denied), isFalse);
+    const activeEntitlement = Entitlement(
+      entitlementId: 'entitled',
+      subject: 'authorized-subject',
+      capability: 'device_identity',
+      state: EntitlementState.active,
+    );
+
+    const inactiveEntitlement = Entitlement(
+      entitlementId: 'none',
+      subject: 'authorized-subject',
+      capability: 'device_identity',
+      state: EntitlementState.inactive,
+    );
+
+    const eligible = DecisionResult(
+      decision: Decision.eligible,
+      reason: 'eligible',
+    );
+
+    const unsupported = DecisionResult(
+      decision: Decision.unsupported,
+      reason: 'unsupported',
+    );
+
+    expect(
+      boundary.allowsExecution(
+        authorization: authorized,
+        entitlement: activeEntitlement,
+        decision: eligible,
+      ),
+      isTrue,
+    );
+
+    expect(
+      boundary.allowsExecution(
+        authorization: denied,
+        entitlement: activeEntitlement,
+        decision: eligible,
+      ),
+      isFalse,
+    );
+
+    expect(
+      boundary.allowsExecution(
+        authorization: authorized,
+        entitlement: inactiveEntitlement,
+        decision: eligible,
+      ),
+      isFalse,
+    );
+
+    expect(
+      boundary.allowsExecution(
+        authorization: authorized,
+        entitlement: activeEntitlement,
+        decision: unsupported,
+      ),
+      isFalse,
+    );
   });
 
   test('baseline policy forbids client override', () {
