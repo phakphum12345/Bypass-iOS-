@@ -1,0 +1,77 @@
+{
+  "files": {
+    "flutter_app/lib/core/contracts/decision_pipeline_contract.dart": {
+      "bytes": 596,
+      "sha256": "73c37f57c85c254eb85e74902381fce34bca0b41b9bb9770efe4df5ef718e898",
+      "template": "tools/codegen/templates/contracts/decision_pipeline_contract.dart.tmpl"
+    },
+    "flutter_app/lib/core/contracts/decision_pipeline_result.dart": {
+      "bytes": 474,
+      "sha256": "0472d4914075c4f31c7b36c27a44a5dd0842ee38c02a6e4d8652536264fada29",
+      "template": "tools/codegen/templates/contracts/decision_pipeline_result.dart.tmpl"
+    },
+    "flutter_app/lib/core/engine/decision_engine.dart": {
+      "bytes": 989,
+      "sha256": "a59ba440021a8ae1bffce7cf5f56ba82b2d4960fd6f09658b952ba0555ac7f38",
+      "template": "tools/codegen/templates/engine/decision_engine.dart.tmpl"
+    },
+    "flutter_app/lib/core/models/authorization.dart": {
+      "bytes": 607,
+      "sha256": "850becd2ecd5eca4b98692441a105b728e376845055d6efb3977294a0fba5dba",
+      "template": "tools/codegen/templates/models/authorization.dart.tmpl"
+    },
+    "flutter_app/lib/core/models/decision.dart": {
+      "bytes": 342,
+      "sha256": "db8caa334a02b8cdf998a1c5d94b553aa36c0e118eb83f9bd8e0fe8ae78fa590",
+      "template": "tools/codegen/templates/models/decision.dart.tmpl"
+    },
+    "flutter_app/lib/core/models/device.dart": {
+      "bytes": 580,
+      "sha256": "816c186c264af6911fde1eaeae5540f696c48c694db4c395f1f67252cc5fa4cb",
+      "template": "tools/codegen/templates/models/device.dart.tmpl"
+    },
+    "flutter_app/lib/core/models/entitlement.dart": {
+      "bytes": 784,
+      "sha256": "aa2ca61516be0c356a0df36278c12f9ebf0e9a0fea16581a28c617004833f75a",
+      "template": "tools/codegen/templates/models/entitlement.dart.tmpl"
+    },
+    "flutter_app/lib/core/models/evidence.dart": {
+      "bytes": 584,
+      "sha256": "23a37d6098f6b87440617d4f3acec1476f76282f9ca61e19213c7ff2813b806a",
+      "template": "tools/codegen/templates/models/evidence.dart.tmpl"
+    },
+    "flutter_app/lib/core/models/policy.dart": {
+      "bytes": 656,
+      "sha256": "3e7bf84102727bde324b27477f2f75dedb2b238a7a7c23de5fca94b71d74502c",
+      "template": "tools/codegen/templates/models/policy.dart.tmpl"
+    },
+    "flutter_app/lib/core/pipeline/decision_pipeline.dart": {
+      "bytes": 1506,
+      "sha256": "fc4ba7b52d25b71808cc5aa4d736978baed571eeaa3218571ca65e7be63b0f68",
+      "template": "tools/codegen/templates/pipeline/decision_pipeline.dart.tmpl"
+    },
+    "flutter_app/lib/core/security/security_boundary.dart": {
+      "bytes": 504,
+      "sha256": "196f2519c687f8013d180ef066b4370406b1b59d490e38aa0b21f758252eaaa8",
+      "template": "tools/codegen/templates/security/security_boundary.dart.tmpl"
+    },
+    "flutter_app/lib/core/services/authorization_service.dart": {
+      "bytes": 1051,
+      "sha256": "ab12e3c1c21193d8b5f11c15e4069601cf338947a0fd0c7f6215cc12af377d37",
+      "template": "tools/codegen/templates/services/authorization_service.dart.tmpl"
+    },
+    "flutter_app/lib/core/services/entitlement_service.dart": {
+      "bytes": 675,
+      "sha256": "0576e0852009d4a19b00b1f6d7f4aba494c678df109bfbcb93282b2f47424708",
+      "template": "tools/codegen/templates/services/entitlement_service.dart.tmpl"
+    },
+    "flutter_app/lib/core/services/evidence_service.dart": {
+      "bytes": 910,
+      "sha256": "2e2d45b57a6e36cd9ec2464067294b121e028bf1d63c6b276156ff2645c8e08a",
+      "template": "tools/codegen/templates/services/evidence_service.dart.tmpl"
+    }
+  },
+  "generator": "deterministic-template-v1",
+  "project": "bypass_architecture_reference",
+  "version": "phase5"
+}
