@@ -13,6 +13,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.orchestrator.gates.runner import run_gates
+from tools.orchestrator.path_guard import validate_allowed_paths
+from tools.orchestrator.spec_loader import load_phase_spec
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -100,6 +102,38 @@ def execute_phase(
         )
 
     print(f"[PASS] contract: {phase['contract']}")
+
+    spec = load_phase_spec(phase_id)
+
+    if spec.get("contract") != phase["contract"]:
+        raise RuntimeError(
+            f"Spec/registry contract mismatch for phase {phase_id}."
+        )
+
+    print(
+        "[PASS] specification: "
+        f"tools/orchestrator/specs/phase_{phase_id}_*.json"
+    )
+
+    allowed_paths = spec.get("allowed_paths", [])
+
+    if not allowed_paths:
+        raise RuntimeError(
+            f"Phase {phase_id} specification has no allowed_paths."
+        )
+
+    allowed, violations = validate_allowed_paths(allowed_paths)
+
+    if not allowed:
+        raise RuntimeError(
+            "Allowed-path guard failed:\n"
+            + "\n".join(
+                f"  FORBIDDEN: {path}"
+                for path in violations
+            )
+        )
+
+    print("[PASS] allowed-path guard")
 
     if policy.get("require_clean_tree", True) and not clean_tree():
         raise RuntimeError("Working tree is not clean.")
