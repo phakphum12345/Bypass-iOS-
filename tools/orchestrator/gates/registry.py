@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 
+from .contract import contract_validation
+
 
 ROOT = Path(__file__).resolve().parents[3]
 FLUTTER_APP = ROOT / "flutter_app"
@@ -48,6 +50,7 @@ COMMAND_GATES = {
     "flutter_analyze": flutter_analyze,
     "flutter_test": flutter_test,
     "git_diff_check": git_diff_check,
+    "contract_validation": contract_validation,
 }
 
 

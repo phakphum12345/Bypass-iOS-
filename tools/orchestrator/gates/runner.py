@@ -13,6 +13,17 @@ def run_gate(name: str):
 
     spec = COMMAND_GATES[name]()
 
+    validator = spec.get("validator")
+
+    if validator is not None:
+        result = validator()
+
+        return {
+            "gate": name,
+            "cwd": str(spec["cwd"].relative_to(spec["cwd"].anchor)),
+            **result,
+        }
+
     result = run_command(
         spec["command"],
         spec["cwd"],
