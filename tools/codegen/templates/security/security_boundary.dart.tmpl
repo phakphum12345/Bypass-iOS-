@@ -1,4 +1,6 @@
 import '../models/authorization.dart';
+import '../models/decision.dart';
+import '../models/entitlement.dart';
 import '../models/policy.dart';
 
 class SecurityBoundary {
@@ -12,8 +14,14 @@ class SecurityBoundary {
     return policy.requiresServerAuthorization;
   }
 
-  bool allowsExecution(AuthorizationResult authorization) {
-    return authorization.isAuthorized;
+  bool allowsExecution({
+    required AuthorizationResult authorization,
+    required Entitlement entitlement,
+    required DecisionResult decision,
+  }) {
+    return authorization.isAuthorized &&
+        entitlement.isActive &&
+        decision.allowed;
   }
 
   String describe() {

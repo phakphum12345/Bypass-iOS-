@@ -51,8 +51,8 @@
       "template": "tools/codegen/templates/pipeline/decision_pipeline.dart.tmpl"
     },
     "flutter_app/lib/core/security/security_boundary.dart": {
-      "bytes": 504,
-      "sha256": "196f2519c687f8013d180ef066b4370406b1b59d490e38aa0b21f758252eaaa8",
+      "bytes": 731,
+      "sha256": "1b9b0d6018b06f5667d9cbaf674c2dab3077b9a1954f658567ce6e46b05b179a",
       "template": "tools/codegen/templates/security/security_boundary.dart.tmpl"
     },
     "flutter_app/lib/core/services/authorization_service.dart": {
