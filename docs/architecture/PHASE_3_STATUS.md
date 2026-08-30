@@ -13,17 +13,11 @@
 - Security boundary created
 - Architecture documentation generator created
 
-## Validation Policy
+## Validation
 
-No final validation is performed during Phase 3.
+Phase implementation is complete.
 
-The following remain deferred:
-
-- flutter analyze
-- flutter test
-- flutter build
-- final integration validation
-- release validation
+Repository-wide validation is performed during FINAL GATE.
 
 ## Next
 

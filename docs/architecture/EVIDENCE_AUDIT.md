@@ -24,6 +24,12 @@ Evidence is descriptive.
 
 Evidence must not be used to fabricate authorization or entitlement.
 
+## Security
+
+Evidence cannot grant authorization.
+
+Evidence cannot convert a denied state into an allowed state.
+
 ## Validation
 
-Automated validation is deferred until the final project gate.
+Automated validation is performed during the final project gate.

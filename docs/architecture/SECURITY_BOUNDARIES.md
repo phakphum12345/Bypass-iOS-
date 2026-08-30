@@ -9,6 +9,14 @@ Authorization must remain outside the presentation layer.
 The Flutter application may display authorization state but must not
 manufacture an authorization result.
 
+## Decision Boundary
+
+Denied authorization remains denied.
+
+Entitlement cannot exceed authorization.
+
+Execution eligibility depends on the authoritative decision.
+
 ## Research Boundary
 
 This project is a defensive architecture reference.

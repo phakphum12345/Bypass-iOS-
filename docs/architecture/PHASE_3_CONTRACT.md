@@ -2,48 +2,82 @@
 
 ## Purpose
 
-Phase 3 establishes the defensive architecture contract separating:
+Phase 3 establishes explicit architectural boundaries for the defensive
+device-service reference implementation.
 
-- Device identity
-- Capability detection
-- Policy evaluation
-- Authorization
-- Entitlement
-- Evidence
-- Execution eligibility
-- Security boundaries
+This project does not implement platform-security bypass behavior.
 
-## Core Rule
-
-The client UI is not an authorization authority.
-
-Authorization and entitlement decisions must be evaluated through the
-defined service boundaries.
-
-## Decision Flow
+## Canonical Pipeline
 
 Device
 → Identity
 → Capability
 → Policy
-→ Authorization
+→ Server Authorization
 → Entitlement
-→ Evidence
 → Execution Eligibility
+→ Evidence
 
-## Security Boundary
+## Policy
 
-The reference implementation does not bypass platform security controls.
+Policy determines whether authorization is required.
 
-Denied decisions must remain denied.
+The baseline policy is deny-by-default.
+
+Client-side authorization override is prohibited.
+
+## Authorization
+
+Authorization is an independent server-side domain concept.
+
+Supported states include:
+
+- unknown
+- pending
+- authorized
+- denied
+- expired
+
+Only an authorized state may satisfy the authorization boundary.
+
+## Entitlement
+
+Entitlement is derived from authorization.
+
+Unauthorized subjects cannot receive an active entitlement.
 
 ## Evidence
 
-Architecture decisions must produce traceable evidence suitable for
-audit and later validation.
+Evidence records decision stages for auditability and traceability.
 
-## Phase Status
+Relevant stages include:
 
-Implementation written.
+- identity
+- capability
+- policy
+- authorization
+- entitlement
+- execution
 
-Validation is intentionally deferred until FINAL GATE.
+## Security Boundary
+
+A denied authorization result cannot be converted into an authorized
+result by the client.
+
+The UI is not an authorization authority.
+
+## Research Boundary
+
+This implementation is defensive and architectural.
+
+It does not bypass:
+
+- platform security
+- authentication
+- authorization
+- licensing
+- entitlement controls
+
+## Validation
+
+Implementation validation is intentionally deferred until FINAL GATE.
