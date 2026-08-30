@@ -1,0 +1,70 @@
+name: Windows Release Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.44.4'
+
+jobs:
+  windows-build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: flutter_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Verify executable
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path build/windows -Filter *.exe -Recurse | Select-Object -First 1
+          if (-not $exe) {
+            Write-Error "Windows executable not found"
+            exit 1
+          }
+          Write-Host "Found executable: $($exe.FullName)"
+          Get-Item $exe.FullName | Format-List FullName,Length
+
+      - name: Package Windows release
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path build/windows/x64/runner/Release/* `
+            -DestinationPath ../bypass-architecture-reference-windows-x64.zip `
+            -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bypass-architecture-reference-windows-x64
+          path: bypass-architecture-reference-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
