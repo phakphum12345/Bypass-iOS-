@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 
+import 'core/contracts/decision_pipeline_contract.dart';
 import 'core/engine/decision_engine.dart';
+import 'core/models/authorization.dart';
 import 'core/models/decision.dart';
 import 'core/models/device.dart';
+import 'core/models/entitlement.dart';
+import 'core/models/evidence.dart';
+import 'core/models/policy.dart';
+import 'core/pipeline/decision_pipeline.dart';
+import 'core/security/security_boundary.dart';
+import 'core/services/authorization_service.dart';
+import 'core/services/entitlement_service.dart';
+import 'core/services/evidence_service.dart';
 
 void main() {
   runApp(const ArchitectureReferenceApp());
@@ -30,7 +40,14 @@ class ArchitectureReferenceApp extends StatelessWidget {
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
-  static const engine = DecisionEngine();
+  static const pipeline = DecisionPipeline(
+    decisionEngine: DecisionEngine(),
+    authorizationService: AuthorizationService(),
+    entitlementService: EntitlementService(),
+    evidenceService: EvidenceService(),
+  );
+
+  static const securityBoundary = SecurityBoundary();
 
   static const device = Device(
     deviceId: 'research-device-001',
@@ -61,7 +78,32 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final result = engine.evaluate(device);
+    const subject = 'research-device-001';
+    const capability = 'device_identity';
+
+    final result = pipeline.execute(
+      DecisionPipelineInput(
+        policy: Policy.baseline,
+        device: device,
+        authorizationRequest: AuthorizationRequest(
+          subject: subject,
+          capability: capability,
+        ),
+        entitlementRequest: EntitlementRequest(
+          subject: subject,
+          capability: capability,
+        ),
+        evidenceRequest: EvidenceRequest(
+          subject: subject,
+        ),
+      ),
+    );
+
+    final executionAllowed = securityBoundary.allowsExecution(
+      authorization: result.authorization,
+      entitlement: result.entitlement,
+      decision: result.decision,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -79,7 +121,14 @@ class DashboardPage extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
-            _DecisionCard(result: result),
+            _DecisionCard(result: result.decision),
+            const SizedBox(height: 16),
+            _ExecutionGate(
+              allowed: executionAllowed,
+              authorization: result.authorization,
+              entitlement: result.entitlement,
+              decision: result.decision,
+            ),
             const SizedBox(height: 16),
             _SectionCard(
               title: 'Architecture flow',
@@ -160,7 +209,7 @@ class DashboardPage extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                   const SizedBox(height: 6),
-                  Text(result.reason),
+                  Text(result.decision.reason),
                   const SizedBox(height: 12),
                   const Wrap(
                     spacing: 8,
@@ -177,6 +226,64 @@ class DashboardPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ExecutionGate extends StatelessWidget {
+  const _ExecutionGate({
+    required this.allowed,
+    required this.authorization,
+    required this.entitlement,
+    required this.decision,
+  });
+
+  final bool allowed;
+  final AuthorizationResult authorization;
+  final Entitlement entitlement;
+  final DecisionResult decision;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: 'Execution gate',
+      icon: allowed ? Icons.lock_open_outlined : Icons.lock_outline,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _InfoRow(
+            'Authorization',
+            authorization.isAuthorized ? 'Authorized' : 'Denied',
+          ),
+          _InfoRow(
+            'Entitlement',
+            entitlement.isActive ? 'Active' : 'Inactive',
+          ),
+          _InfoRow(
+            'Decision',
+            decision.allowed ? 'Eligible' : 'Blocked',
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: allowed ? () {} : null,
+              icon: Icon(
+                allowed ? Icons.play_arrow_outlined : Icons.block_outlined,
+              ),
+              label: Text(
+                allowed ? 'Execute' : 'Execution blocked',
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            allowed
+                ? 'Execution passed the security boundary.'
+                : 'Execution is blocked by the security boundary.',
+          ),
+        ],
       ),
     );
   }

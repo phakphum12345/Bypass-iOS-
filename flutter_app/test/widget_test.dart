@@ -90,13 +90,13 @@ void main() {
 
     expect(find.text('Bypass-iOS Architecture'), findsOneWidget);
     expect(find.text('Eligibility decision'), findsOneWidget);
-    expect(find.text('Eligible'), findsOneWidget);
+    expect(find.text('Eligible'), findsWidgets);
     expect(find.text('Identity'), findsOneWidget);
     expect(find.text('Capability'), findsOneWidget);
     expect(find.text('Policy'), findsOneWidget);
-    expect(find.text('Authorization'), findsOneWidget);
-    expect(find.text('Entitlement'), findsOneWidget);
-    expect(find.text('Execution'), findsOneWidget);
+    expect(find.text('Authorization'), findsWidgets);
+    expect(find.text('Entitlement'), findsWidgets);
+    expect(find.text('Execution'), findsWidgets);
     expect(find.text('Evidence'), findsWidgets);
 
     await tester.scrollUntilVisible(
