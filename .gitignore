@@ -223,3 +223,5 @@ __marimo__/
 !flutter_app/lib/**
 !flutter_app/test/
 !flutter_app/test/**
+
+.venv-autonomous/
