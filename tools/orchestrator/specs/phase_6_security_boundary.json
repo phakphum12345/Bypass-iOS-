@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "phase": 6,
+  "name": "security-boundary",
+  "contract": "docs/architecture/PHASE_6_CONTRACT.md",
+
+  "objective": "Implement a defensive security-boundary layer that prevents client-side state, evidence, entitlement, or UI state from granting or overriding server authorization.",
+
+  "required_invariants": [
+    "client_state_cannot_grant_authorization",
+    "denied_authorization_remains_denied",
+    "entitlement_cannot_exceed_authorization",
+    "evidence_cannot_grant_authorization",
+    "ui_state_cannot_override_security_boundary",
+    "execution_eligibility_depends_on_authoritative_decision"
+  ],
+
+  "required_test_categories": [
+    "authorization_denial",
+    "authorization_entitlement_boundary",
+    "evidence_cannot_authorize",
+    "ui_cannot_override_authorization",
+    "execution_requires_authoritative_decision"
+  ],
+
+  "allowed_paths": [
+    "flutter_app/lib/core/security/",
+    "flutter_app/lib/core/pipeline/",
+    "flutter_app/test/",
+    "docs/architecture/"
+  ],
+
+  "forbidden_behaviors": [
+    "platform_security_bypass",
+    "unauthorized_execution",
+    "client_side_authorization",
+    "entitlement_escalation",
+    "ui_authorization_override",
+    "evidence_based_authorization"
+  ],
+
+  "completion_criteria": [
+    "required_invariants_are_represented_in_source",
+    "required_test_categories_are_covered",
+    "dart_format_passes",
+    "flutter_analyze_passes",
+    "flutter_test_passes",
+    "contract_validation_passes",
+    "git_diff_check_passes",
+    "no_changes_outside_allowed_paths"
+  ],
+
+  "max_repair_attempts": 3
+}
