@@ -30,7 +30,9 @@ class DecisionPipeline {
       authorization: authorization,
     );
 
-    final decision = decisionEngine.evaluate(input.device);
+    final decision = decisionEngine.evaluate(
+      input.device,
+    );
 
     final evidence = evidenceService.record(
       request: input.evidenceRequest,
