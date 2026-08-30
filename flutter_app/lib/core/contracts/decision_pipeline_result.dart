@@ -4,9 +4,9 @@ import '../models/entitlement.dart';
 import '../models/evidence.dart';
 
 class DecisionPipelineResult {
-  final Authorization authorization;
+  final AuthorizationResult authorization;
   final Entitlement entitlement;
-  final Decision decision;
+  final DecisionResult decision;
   final Evidence evidence;
 
   const DecisionPipelineResult({

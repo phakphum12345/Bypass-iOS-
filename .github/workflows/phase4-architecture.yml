@@ -1,14 +1,22 @@
-name: Phase 4 Architecture Continuation
+name: Phase 4 Architecture Validation
 
 on:
   push:
     branches:
       - main
       - 'phase/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'flutter_app/**'
+      - 'docs/architecture/**'
+      - '.github/workflows/phase4-architecture.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   architecture:
@@ -18,237 +26,76 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect Flutter project
+      - name: Validate architecture structure
         shell: bash
         run: |
           set -euo pipefail
 
-          if [ ! -d flutter_app ]; then
-            echo "ERROR: flutter_app not found"
-            exit 1
-          fi
+          required_files=(
+            "flutter_app/lib/core/contracts/decision_pipeline_contract.dart"
+            "flutter_app/lib/core/contracts/decision_pipeline_result.dart"
+            "flutter_app/lib/core/pipeline/decision_pipeline.dart"
+            "flutter_app/lib/core/services/authorization_service.dart"
+            "flutter_app/lib/core/services/entitlement_service.dart"
+            "flutter_app/lib/core/services/evidence_service.dart"
+            "flutter_app/lib/core/security/security_boundary.dart"
+            "flutter_app/test/decision_pipeline_test.dart"
+            "docs/architecture/PHASE_4_CONTRACT.md"
+            "docs/architecture/DECISION_PIPELINE.md"
+            "docs/architecture/EVIDENCE_AUDIT.md"
+            "docs/architecture/SECURITY_BOUNDARIES.md"
+          )
 
-          cd flutter_app
+          for file in "${required_files[@]}"; do
+            test -s "$file"
+            echo "PASS: $file"
+          done
 
-          test -d lib/core
-          test -d lib/core/models
-          test -d lib/core/services
-          test -d lib/core/pipeline
-          test -d lib/core/contracts
-
-          echo "PASS: Flutter architecture directories"
-
-      - name: Reconcile Phase 4 files
+      - name: Validate security boundary
         shell: bash
         run: |
           set -euo pipefail
 
-          cd flutter_app
+          grep -q "canClientOverrideAuthorization"             flutter_app/lib/core/security/security_boundary.dart
 
-          mkdir -p lib/core/pipeline
-          mkdir -p lib/core/contracts
-          mkdir -p docs/architecture
+          grep -q "return false"             flutter_app/lib/core/security/security_boundary.dart
 
-          cat > lib/core/contracts/decision_pipeline_contract.dart <<'DART'
-          import '../models/authorization.dart';
-          import '../models/device.dart';
-          import '../models/entitlement.dart';
-          import '../models/evidence.dart';
-          import '../models/policy.dart';
+          grep -qi "server authorization"             docs/architecture/PHASE_4_CONTRACT.md
 
-          class DecisionPipelineInput {
-            final Policy policy;
-            final Device device;
-            final AuthorizationRequest authorizationRequest;
-            final EntitlementRequest entitlementRequest;
-            final EvidenceRequest evidenceRequest;
+          echo "PASS: security boundary"
 
-            const DecisionPipelineInput({
-              required this.policy,
-              required this.device,
-              required this.authorizationRequest,
-              required this.entitlementRequest,
-              required this.evidenceRequest,
-            });
-          }
-          DART
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.4"
+          channel: stable
+          cache: true
 
-          cat > lib/core/contracts/decision_pipeline_result.dart <<'DART'
-          import '../models/authorization.dart';
-          import '../models/decision.dart';
-          import '../models/entitlement.dart';
-          import '../models/evidence.dart';
+      - name: Pub get
+        working-directory: flutter_app
+        run: flutter pub get
 
-          class DecisionPipelineResult {
-            final Authorization authorization;
-            final Entitlement entitlement;
-            final Decision decision;
-            final Evidence evidence;
+      - name: Flutter analyze
+        working-directory: flutter_app
+        run: flutter analyze
 
-            const DecisionPipelineResult({
-              required this.authorization,
-              required this.entitlement,
-              required this.decision,
-              required this.evidence,
-            });
-          }
-          DART
+      - name: Flutter test
+        working-directory: flutter_app
+        run: flutter test
 
-          cat > lib/core/pipeline/decision_pipeline.dart <<'DART'
-          import '../contracts/decision_pipeline_contract.dart';
-          import '../contracts/decision_pipeline_result.dart';
-          import '../engine/decision_engine.dart';
-          import '../services/authorization_service.dart';
-          import '../services/entitlement_service.dart';
-          import '../services/evidence_service.dart';
+      - name: Dart format check
+        working-directory: flutter_app
+        run: dart format --output=none --set-exit-if-changed lib test
 
-          class DecisionPipeline {
-            final DecisionEngine decisionEngine;
-            final AuthorizationService authorizationService;
-            final EntitlementService entitlementService;
-            final EvidenceService evidenceService;
-
-            const DecisionPipeline({
-              required this.decisionEngine,
-              required this.authorizationService,
-              required this.entitlementService,
-              required this.evidenceService,
-            });
-
-            DecisionPipelineResult execute(DecisionPipelineInput input) {
-              final authorization =
-                  authorizationService.authorize(
-                input.authorizationRequest,
-              );
-
-              final entitlement =
-                  entitlementService.resolve(
-                input.entitlementRequest,
-              );
-
-              final decision = decisionEngine.evaluate(
-                input.policy,
-                input.device,
-                authorization,
-                entitlement,
-              );
-
-              final evidence = evidenceService.record(
-                input.evidenceRequest,
-                decision,
-              );
-
-              return DecisionPipelineResult(
-                authorization: authorization,
-                entitlement: entitlement,
-                decision: decision,
-                evidence: evidence,
-              );
-            }
-          }
-          DART
-
-          cat > docs/architecture/DECISION_PIPELINE.md <<'MD'
-          # Decision Pipeline
-
-          ## Phase 4
-
-          The Decision Pipeline is the canonical integration boundary for:
-
-          1. Device context
-          2. Policy
-          3. Authorization
-          4. Entitlement
-          5. Decision Engine
-          6. Evidence
-
-          ## Flow
-
-          ```text
-          Device
-             ↓
-          Policy
-             ↓
-          Authorization Service
-             ↓
-          Entitlement Service
-             ↓
-          Decision Engine
-             ↓
-          Evidence Service
-             ↓
-          DecisionPipelineResult
-          ```
-
-          ## Validation Policy
-
-          Phase 4 implementation validation is intentionally deferred.
-
-          Final validation occurs only during FINAL GATE:
-
-          ```text
-          flutter format
-              ↓
-          flutter analyze
-              ↓
-          flutter test
-              ↓
-          release build
-              ↓
-          PROJECT COMPLETE
-          ```
-          MD
-
-          echo "PASS: Phase 4 canonical files written"
-
-      - name: Generate architecture documentation
-        shell: bash
+      - name: Final Phase 4 gate
         run: |
-          set -euo pipefail
-
-          cd flutter_app
-
-          if [ -f ../tools/generate_architecture_docs.dart ]; then
-            dart ../tools/generate_architecture_docs.dart
-          else
-            echo "INFO: generator not present at repository root"
-          fi
-
-          test -f docs/architecture/DECISION_PIPELINE.md
-
-          echo "PASS: architecture documentation"
-
-      - name: Structural gate only
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          cd flutter_app
-
-          test -f lib/core/pipeline/decision_pipeline.dart
-          test -f lib/core/contracts/decision_pipeline_contract.dart
-          test -f lib/core/contracts/decision_pipeline_result.dart
-          test -f docs/architecture/DECISION_PIPELINE.md
-
-          echo "PASS: Phase 4 structural gate"
-          echo "NO flutter analyze"
-          echo "NO flutter test"
-          echo "NO release build"
-
-      - name: Commit generated architecture
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if git diff --quiet; then
-            echo "NO CHANGES"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add flutter_app/lib/core flutter_app/docs/architecture
-          git commit -m "chore: reconcile phase 4 decision pipeline"
-
-          git push
+          echo "========================================"
+          echo "PHASE 4 ARCHITECTURE VALIDATION: PASS"
+          echo "Structure       : PASS"
+          echo "Security        : PASS"
+          echo "Flutter analyze : PASS"
+          echo "Flutter tests   : PASS"
+          echo "Dart format     : PASS"
+          echo "Mutation        : DISABLED"
+          echo "Git push        : DISABLED"
+          echo "========================================"
