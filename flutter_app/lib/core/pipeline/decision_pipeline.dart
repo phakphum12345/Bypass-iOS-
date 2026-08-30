@@ -19,26 +19,26 @@ class DecisionPipeline {
   });
 
   DecisionPipelineResult execute(DecisionPipelineInput input) {
-    final authorization = authorizationService.authorize(
+    final authorization =
+        authorizationService.authorize(
       input.authorizationRequest,
-      device: input.device,
-      policy: input.policy,
     );
 
-    final entitlement = entitlementService.resolve(
+    final entitlement =
+        entitlementService.resolve(
       input.entitlementRequest,
-      authorization: authorization,
     );
 
-    final decision = decisionEngine.evaluate(input.device);
+    final decision = decisionEngine.evaluate(
+      input.policy,
+      input.device,
+      authorization,
+      entitlement,
+    );
 
     final evidence = evidenceService.record(
-      request: input.evidenceRequest,
-      device: input.device,
-      policy: input.policy,
-      authorization: authorization,
-      entitlement: entitlement,
-      decision: decision,
+      input.evidenceRequest,
+      decision,
     );
 
     return DecisionPipelineResult(
