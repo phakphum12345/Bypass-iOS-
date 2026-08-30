@@ -186,3 +186,51 @@ It does not contain:
 ## Final Principle
 
 Identity → Capability → Policy → Authorization → Entitlement → Execution → Evidence
+
+## Phase 3 Architecture Hardening
+
+The reference implementation separates policy evaluation,
+authorization, entitlement and evidence.
+
+### Policy boundary
+
+Policy is identified by `policy_id` and `version`.
+Eligibility is evaluated against an explicit policy.
+
+### Authorization boundary
+
+Authorization is an independent server-side decision.
+The client cannot manufacture an authorization result.
+
+### Entitlement boundary
+
+Authorization alone does not grant service access.
+An active entitlement is required before execution.
+
+### Execution boundary
+
+Execution requires:
+
+Authorization = ALLOWED
+AND
+Entitlement = ACTIVE
+
+Otherwise execution is denied.
+
+### Evidence boundary
+
+A decision can emit an immutable evidence record containing
+the actor, device, service, policy decision, authorization result,
+timestamp and correlation identifier.
+
+### Defensive invariant
+
+The reference implementation never implements:
+
+- Activation Lock bypass
+- passcode bypass
+- MDM circumvention
+- credential theft
+- exploit delivery
+- unauthorized device access
+- security-control evasion
