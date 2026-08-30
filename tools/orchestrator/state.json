@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "project": "Bypass-iOS",
+  "current_phase": 6,
+  "completed_phases": [3, 4, 5],
+  "status": "planned",
+  "attempts": {},
+  "last_verified_commit": "416b806",
+  "gates": {},
+  "history": []
+}

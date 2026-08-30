@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "mode": "plan_only",
+  "max_phase_retries": 3,
+  "allow_source_mutation": false,
+  "allow_git_commit": false,
+  "allow_git_push": false,
+  "allow_pull_request": false,
+  "allow_merge": false,
+  "require_clean_tree": true,
+  "require_contract": true,
+  "require_dependencies_complete": true
+}
