@@ -1,0 +1,55 @@
+name: Phase 5 Codegen
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  codegen:
+    name: Generate + Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Verify codegen scripts
+        run: |
+          python3 -m py_compile tools/codegen/generate.py
+          python3 -m py_compile tools/codegen/validators/validate_generated.py
+          bash -n tools/codegen/run_phase5.sh
+
+      - name: Install Flutter dependencies
+        working-directory: flutter_app
+        run: |
+          flutter pub get
+
+      - name: Run Phase 5 codegen
+        run: |
+          ./tools/codegen/run_phase5.sh
+
+      - name: Detect generated drift
+        run: |
+          if ! git diff --exit-code -- flutter_app/lib/core tools/codegen/generated_manifest.json; then
+            echo "::error::Generated code is out of sync with canonical templates."
+            echo "Run ./tools/codegen/run_phase5.sh locally and commit the generated result."
+            exit 1
+          fi
+
+      - name: Verify clean working tree
+        run: |
+          git diff --check
+          git status --short

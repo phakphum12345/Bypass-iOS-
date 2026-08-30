@@ -1,0 +1,34 @@
+{
+  "project": "bypass_architecture_reference",
+  "version": "phase5",
+  "output_root": "flutter_app/lib/core",
+  "models": [
+    "authorization",
+    "decision",
+    "device",
+    "entitlement",
+    "evidence",
+    "policy"
+  ],
+  "contracts": [
+    "decision_pipeline_contract",
+    "decision_pipeline_result"
+  ],
+  "services": [
+    "authorization_service",
+    "entitlement_service",
+    "evidence_service"
+  ],
+  "engine": [
+    "decision_engine"
+  ],
+  "pipeline": [
+    "decision_pipeline"
+  ],
+  "security": [
+    "security_boundary"
+  ],
+  "tests": [
+    "decision_pipeline_test"
+  ]
+}
