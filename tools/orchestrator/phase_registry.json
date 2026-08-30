@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "project": "Bypass-iOS",
+  "phases": [
+    {
+      "id": 6,
+      "name": "security-boundary",
+      "type": "implementation",
+      "contract": "docs/architecture/PHASE_6_CONTRACT.md",
+      "depends_on": [5],
+      "allowed_paths": [
+        "flutter_app/lib/core/security/",
+        "flutter_app/lib/core/pipeline/",
+        "flutter_app/test/",
+        "docs/architecture/"
+      ],
+      "gates": [
+        "dart_format",
+        "flutter_analyze",
+        "flutter_test",
+        "contract_validation",
+        "git_diff_check"
+      ],
+      "max_retries": 3
+    },
+    {
+      "id": 7,
+      "name": "ui-boundary",
+      "type": "implementation",
+      "contract": "docs/architecture/PHASE_7_CONTRACT.md",
+      "depends_on": [6],
+      "allowed_paths": [
+        "flutter_app/lib/",
+        "flutter_app/test/",
+        "docs/architecture/"
+      ],
+      "gates": [
+        "dart_format",
+        "flutter_analyze",
+        "flutter_test",
+        "contract_validation",
+        "git_diff_check"
+      ],
+      "max_retries": 3
+    },
+    {
+      "id": 8,
+      "name": "documentation-consistency",
+      "type": "documentation",
+      "contract": "docs/architecture/PHASE_8_CONTRACT.md",
+      "depends_on": [7],
+      "allowed_paths": [
+        "docs/architecture/"
+      ],
+      "gates": [
+        "documentation_validation",
+        "git_diff_check"
+      ],
+      "max_retries": 3
+    },
+    {
+      "id": 9,
+      "name": "release",
+      "type": "release",
+      "contract": "docs/architecture/PHASE_9_RELEASE_CONTRACT.md",
+      "depends_on": [8],
+      "allowed_paths": [
+        ".github/workflows/",
+        "docs/architecture/",
+        "flutter_app/"
+      ],
+      "gates": [
+        "dart_format",
+        "flutter_analyze",
+        "flutter_test",
+        "web_build",
+        "linux_build",
+        "documentation_validation",
+        "security_validation",
+        "git_sync_check",
+        "git_diff_check"
+      ],
+      "max_retries": 3
+    }
+  ]
+}
