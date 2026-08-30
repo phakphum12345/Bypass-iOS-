@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from tools.orchestrator.executor import load_json
 from tools.orchestrator.gates.runner import run_gates
+from tools.orchestrator.lifecycle import is_terminal_state
 
 
 ORCHESTRATOR_DIR = ROOT / "tools" / "orchestrator"
@@ -269,6 +270,32 @@ def main() -> int:
         )
 
         return 1
+
+    if is_terminal_state(registry, state):
+        print()
+        print("=" * 60)
+        print("AUTONOMOUS PHASE LOOP TERMINAL")
+        print("=" * 60)
+        print(
+            "Completed phases :",
+            ", ".join(
+                map(
+                    str,
+                    sorted(
+                        state.get(
+                            "completed_phases",
+                            [],
+                        )
+                    ),
+                )
+            ),
+        )
+        print("Current phase    : none")
+        print("Status           : completed")
+        print("Result           : PROJECT COMPLETE")
+        print("=" * 60)
+
+        return 0
 
     state["status"] = "planned"
     state["current_phase"] = None

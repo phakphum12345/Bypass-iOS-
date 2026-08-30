@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "phase": 9,
+  "name": "release",
+  "contract": "docs/architecture/PHASE_9_RELEASE_CONTRACT.md",
+  "objective": "Validate the Bypass-iOS release state against the defensive architecture, release contract, build requirements, documentation requirements, security boundary, and repository synchronization requirements.",
+  "required_invariants": [
+    "release_preserves_security_boundary",
+    "release_requires_passing_validation",
+    "release_documentation_is_canonical",
+    "release_requires_git_synchronization"
+  ],
+  "required_test_categories": [
+    "dart_format",
+    "flutter_analyze",
+    "flutter_test",
+    "web_build",
+    "linux_build",
+    "documentation_validation",
+    "security_validation",
+    "git_sync_check",
+    "git_diff_check"
+  ],
+  "allowed_paths": [
+    ".github/workflows/",
+    "docs/architecture/",
+    "flutter_app/"
+  ],
+  "forbidden_behaviors": [
+    "platform_security_bypass",
+    "unauthorized_execution",
+    "client_side_authorization",
+    "entitlement_escalation",
+    "ui_authorization_override",
+    "evidence_based_authorization"
+  ],
+  "completion_criteria": [
+    "release_contract_exists",
+    "required_validation_gates_pass",
+    "security_boundary_is_preserved",
+    "documentation_is_consistent",
+    "git_working_tree_is_controlled",
+    "local_and_remote_main_are_synchronized"
+  ],
+  "max_repair_attempts": 3
+}

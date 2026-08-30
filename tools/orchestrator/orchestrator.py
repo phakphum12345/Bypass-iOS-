@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tools.orchestrator.lifecycle import is_terminal_state
+
 
 ROOT = Path(__file__).resolve().parents[2]
 ORCHESTRATOR_DIR = ROOT / "tools" / "orchestrator"
@@ -71,6 +73,16 @@ def main():
 
     current_phase_id = state["current_phase"]
     completed = set(state.get("completed_phases", []))
+
+    if is_terminal_state(registry, state):
+        print("\n===== TERMINAL STATE =====")
+        print("  All registered phases are completed.")
+        print("  Current phase : none")
+        print("  Project       : COMPLETE")
+        print("\n" + "=" * 60)
+        print("PROJECT COMPLETE — NO FURTHER PHASE")
+        print("=" * 60)
+        return 0
 
     phase = find_phase(registry, current_phase_id)
 

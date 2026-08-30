@@ -10,26 +10,37 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def git_changed_paths() -> list[str]:
-    result = subprocess.run(
+    commands = [
         ["git", "diff", "--name-only"],
-        cwd=ROOT,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
+        ["git", "diff", "--cached", "--name-only"],
+        ["git", "ls-files", "--others", "--exclude-standard"],
+    ]
 
-    if result.returncode != 0:
-        raise RuntimeError(
-            "Unable to inspect git working-tree changes:\n"
-            + result.stdout
+    changed: set[str] = set()
+
+    for command in commands:
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
         )
 
-    return [
-        line.strip()
-        for line in result.stdout.splitlines()
-        if line.strip()
-    ]
+        if result.returncode != 0:
+            raise RuntimeError(
+                "Unable to inspect git working-tree changes:\n"
+                + result.stdout
+            )
+
+        changed.update(
+            line.strip()
+            for line in result.stdout.splitlines()
+            if line.strip()
+        )
+
+    return sorted(changed)
 
 
 def path_allowed(path: str, allowed_paths: list[str]) -> bool:
