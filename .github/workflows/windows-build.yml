@@ -1,0 +1,192 @@
+name: Windows Build
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-build:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter version
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Verify Windows project
+        working-directory: flutter_app
+        run: |
+          if (-not (Test-Path "windows")) {
+            throw "flutter_app/windows project is missing."
+          }
+
+          if (-not (Test-Path "windows/CMakeLists.txt")) {
+            throw "windows/CMakeLists.txt is missing."
+          }
+
+      - name: Install dependencies
+        working-directory: flutter_app
+        run: |
+          flutter pub get
+
+      - name: Analyze
+        working-directory: flutter_app
+        run: |
+          flutter analyze
+
+      - name: Test
+        working-directory: flutter_app
+        run: |
+          flutter test
+
+      - name: Build Windows release
+        working-directory: flutter_app
+        run: |
+          flutter build windows --release
+
+      - name: Verify EXE
+        working-directory: flutter_app
+        run: |
+          $exe = Get-ChildItem `
+            -Path "build/windows/x64/runner/Release" `
+            -Filter "*.exe" `
+            -File `
+            -Recurse `
+            | Select-Object -First 1
+
+          if ($null -eq $exe) {
+            throw "No EXE found."
+          }
+
+          Write-Host "EXE found:"
+          Write-Host $exe.FullName
+
+          if ($exe.Length -le 0) {
+            throw "EXE is empty."
+          }
+
+          Write-Host "EXE size: $($exe.Length) bytes"
+
+      - name: Package application
+        working-directory: flutter_app
+        run: |
+          $releaseDir = "build/windows/x64/runner/Release"
+
+          if (-not (Test-Path $releaseDir)) {
+            throw "Release directory not found."
+          }
+
+          $packageDir = "build/package"
+
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path $packageDir `
+            | Out-Null
+
+          $zip = Join-Path `
+            $packageDir `
+            "bypass-ios-windows-x64.zip"
+
+          if (Test-Path $zip) {
+            Remove-Item `
+              $zip `
+              -Force
+          }
+
+          Compress-Archive `
+            -Path "$releaseDir/*" `
+            -DestinationPath $zip `
+            -CompressionLevel Optimal
+
+          if (-not (Test-Path $zip)) {
+            throw "ZIP package was not created."
+          }
+
+          $zipItem = Get-Item $zip
+
+          if ($zipItem.Length -le 0) {
+            throw "ZIP package is empty."
+          }
+
+          Write-Host "Package created:"
+          Write-Host $zip
+          Write-Host "ZIP size: $($zipItem.Length) bytes"
+
+      - name: Verify package contents
+        working-directory: flutter_app
+        run: |
+          $zip = "build/package/bypass-ios-windows-x64.zip"
+
+          if (-not (Test-Path $zip)) {
+            throw "ZIP package not found."
+          }
+
+          $extractDir = "build/package/verify"
+
+          if (Test-Path $extractDir) {
+            Remove-Item `
+              $extractDir `
+              -Recurse `
+              -Force
+          }
+
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path $extractDir `
+            | Out-Null
+
+          Expand-Archive `
+            -Path $zip `
+            -DestinationPath $extractDir `
+            -Force
+
+          $exe = Get-ChildItem `
+            -Path $extractDir `
+            -Filter "*.exe" `
+            -File `
+            -Recurse `
+            | Select-Object -First 1
+
+          if ($null -eq $exe) {
+            throw "Packaged ZIP does not contain an EXE."
+          }
+
+          Write-Host "Packaged EXE:"
+          Write-Host $exe.FullName
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bypass-ios-windows-x64
+          path: flutter_app/build/package/bypass-ios-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
