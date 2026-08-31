@@ -11,5 +11,6 @@
   "allow_merge": false,
   "require_clean_tree_before_run": true,
   "require_allowed_paths_after_mutation": true,
-  "require_all_gates_pass": true
+  "require_all_gates_pass": true,
+  "default_base": "main"
 }
