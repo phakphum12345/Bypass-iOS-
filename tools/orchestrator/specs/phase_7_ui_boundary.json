@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "phase": 7,
+  "name": "ui-boundary",
+  "contract": "docs/architecture/PHASE_7_CONTRACT.md",
+  "objective": "Ensure the UI presents authoritative decisions without overriding authorization, entitlement, evidence, or execution eligibility.",
+  "required_invariants": [
+    "ui_cannot_grant_authorization",
+    "ui_cannot_override_denied_authorization",
+    "ui_cannot_escalate_entitlement",
+    "ui_cannot_treat_evidence_as_authorization",
+    "ui_execution_state_reflects_authoritative_decision"
+  ],
+  "required_test_categories": [
+    "ui_cannot_override_authorization",
+    "denied_state_remains_denied",
+    "ui_reflects_authoritative_decision"
+  ],
+  "allowed_paths": [
+    "flutter_app/lib/",
+    "flutter_app/test/",
+    "docs/architecture/"
+  ],
+  "forbidden_behaviors": [
+    "platform_security_bypass",
+    "unauthorized_execution",
+    "client_side_authorization",
+    "entitlement_escalation",
+    "ui_authorization_override",
+    "evidence_based_authorization"
+  ],
+  "completion_criteria": [
+    "required_invariants_are_represented_in_source",
+    "required_test_categories_are_covered",
+    "dart_format_passes",
+    "flutter_analyze_passes",
+    "flutter_test_passes",
+    "contract_validation_passes",
+    "git_diff_check_passes",
+    "no_changes_outside_allowed_paths"
+  ],
+  "max_repair_attempts": 3
+}
