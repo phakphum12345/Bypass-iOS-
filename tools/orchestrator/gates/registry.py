@@ -45,7 +45,7 @@ def git_diff_check():
     }
 
 
-def documentation_validation():
+def validate_documentation():
     required = [
         ROOT / "docs/architecture/DECISION_PIPELINE.md",
         ROOT / "docs/architecture/EVIDENCE_AUDIT.md",
@@ -67,8 +67,6 @@ def documentation_validation():
 
     if missing:
         return {
-            "command": ["documentation-validation"],
-            "cwd": ROOT,
             "passed": False,
             "output": (
                 "Missing or empty documentation:\n"
@@ -76,11 +74,31 @@ def documentation_validation():
             ),
         }
 
+    competing = list((ROOT / "flutter_app").glob("**/architecture"))
+
+    if competing:
+        return {
+            "passed": False,
+            "output": (
+                "Competing Flutter-local architecture tree found:\n"
+                + "\n".join(
+                    str(path.relative_to(ROOT))
+                    for path in competing
+                )
+            ),
+        }
+
+    return {
+        "passed": True,
+        "output": "Canonical architecture documentation validated.",
+    }
+
+
+def documentation_validation():
     return {
         "command": ["documentation-validation"],
         "cwd": ROOT,
-        "passed": True,
-        "output": "Canonical architecture documentation validated.",
+        "validator": validate_documentation,
     }
 
 
