@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.orchestrator.git_provider import LocalGitProvider
+from tools.orchestrator.repair_provider import repair as repair_with_provider
 from tools.orchestrator.mutation_provider import (
     apply as apply_mutation,
     dry_run as mutation_dry_run,
@@ -380,45 +381,163 @@ def main() -> int:
     print("[PASS] mutation")
 
     # ----------------------------------------------------------
-    # VALIDATION
+    # VALIDATION / REPAIR LOOP
     # ----------------------------------------------------------
 
-    transition(
-        state,
-        "validating",
+    max_attempts = int(
+        policy.get(
+            "max_repair_attempts",
+            3,
+        )
     )
-    state["status"] = "validating"
-    save_json(args.state, state)
 
-    executor = [
-        "python3",
-        "-m",
-        "tools.orchestrator.execution_engine",
-        "--phase",
-        str(args.phase),
-        "--state",
-        str(args.state),
-        "--execute",
-        "--allow-worktree-changes",
-    ]
+    attempts = 0
+    gate_results: list[dict[str, Any]] = []
 
-    validation = run(executor)
+    while True:
+        validation = run(executor)
 
-    print()
-    print(validation["output"])
+        print()
+        print(validation["output"])
 
-    if not validation["passed"]:
-        state["status"] = "failed"
+        # The execution engine returns success only when every
+        # configured gate for the phase passes.
+        if validation["passed"]:
+            gate_results = [
+                {
+                    "gate": "execution_engine",
+                    "passed": True,
+                }
+            ]
+            break
+
+        attempts += 1
+
+        # Record the failed validation before attempting repair.
+        state["status"] = "repairing"
         state["current_phase"] = args.phase
+        state.setdefault(
+            "attempts",
+            {},
+        )[str(args.phase)] = attempts
+
+        failure = {
+            "gate": "execution_engine",
+            "passed": False,
+            "output": validation["output"],
+            "attempt": attempts,
+        }
+
         state.setdefault(
             "failures",
             [],
+        ).append(failure)
+
+        save_json(
+            args.state,
+            state,
+        )
+
+        print(
+            f"[FAIL] validation attempt {attempts}/{max_attempts}"
+        )
+
+        if attempts > max_attempts:
+            state["status"] = "failed"
+            save_json(
+                args.state,
+                state,
+            )
+            print(
+                "[FAIL] maximum repair attempts exceeded"
+            )
+            return 1
+
+        repair_plan = task.get(
+            "repair",
+            {},
+        )
+
+        if not repair_plan:
+            state["status"] = "failed"
+            state["current_phase"] = args.phase
+            state.setdefault(
+                "failures",
+                [],
+            ).append({
+                "stage": "repairing",
+                "error": (
+                    "No explicit repair plan was supplied "
+                    "for the failed validation."
+                ),
+            })
+            save_json(
+                args.state,
+                state,
+            )
+
+            print(
+                "[FAIL] no explicit repair plan"
+            )
+            return 1
+
+        repair_result = repair_with_provider(
+            repair_plan=repair_plan,
+            failures=[failure],
+            attempt=attempts,
+            max_attempts=max_attempts,
+        )
+
+        state.setdefault(
+            "repair",
+            [],
         ).append({
-            "stage": "validating",
-            "error": validation["output"],
+            "attempt": attempts,
+            **repair_result,
         })
-        save_json(args.state, state)
-        return 1
+
+        if not repair_result["passed"]:
+            state["status"] = "failed"
+            state["current_phase"] = args.phase
+            state.setdefault(
+                "failures",
+                [],
+            ).append({
+                "stage": "repairing",
+                "error": repair_result.get(
+                    "error",
+                    "Repair provider failed.",
+                ),
+            })
+
+            save_json(
+                args.state,
+                state,
+            )
+
+            print(
+                "[FAIL] repair:",
+                repair_result.get(
+                    "error",
+                    "Repair provider failed.",
+                ),
+            )
+            return 1
+
+        print(
+            f"[PASS] repair attempt {attempts}"
+        )
+
+        state["status"] = "validating"
+        save_json(
+            args.state,
+            state,
+        )
+
+    state.setdefault(
+        "gates",
+        {},
+    )[str(args.phase)] = gate_results
 
     # ----------------------------------------------------------
     # FINAL VALIDATION
