@@ -126,7 +126,7 @@ def linux_build():
     }
 
 
-def security_validation():
+def validate_security():
     required_files = [
         ROOT / "flutter_app/lib/core/security/security_boundary.dart",
         ROOT / "flutter_app/lib/core/pipeline/decision_pipeline.dart",
@@ -140,8 +140,6 @@ def security_validation():
 
     if missing:
         return {
-            "command": ["security-validation"],
-            "cwd": ROOT,
             "passed": False,
             "output": (
                 "Missing security files:\n"
@@ -169,8 +167,6 @@ def security_validation():
 
     if missing_tokens:
         return {
-            "command": ["security-validation"],
-            "cwd": ROOT,
             "passed": False,
             "output": (
                 "Security boundary markers missing:\n"
@@ -179,10 +175,16 @@ def security_validation():
         }
 
     return {
-        "command": ["security-validation"],
-        "cwd": ROOT,
         "passed": True,
         "output": "Security boundary markers validated.",
+    }
+
+
+def security_validation():
+    return {
+        "command": ["security-validation"],
+        "cwd": ROOT,
+        "validator": validate_security,
     }
 
 
