@@ -502,6 +502,17 @@ def main() -> int:
         "--validation-only",
     ]
 
+    transition(
+        state,
+        "validating",
+    )
+    state["status"] = "validating"
+    state["current_phase"] = args.phase
+    save_json(
+        args.state,
+        state,
+    )
+
     attempts = 0
     gate_results: list[dict[str, Any]] = []
 
