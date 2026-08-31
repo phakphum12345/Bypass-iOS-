@@ -7,8 +7,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[2]
-
 
 def path_allowed(
     path: str,
@@ -49,16 +47,15 @@ def validate_task(
             ),
         }
 
-    if not isinstance(task["allowed_paths"], list):
+    allowed_paths = task["allowed_paths"]
+
+    if not isinstance(allowed_paths, list):
         return {
             "passed": False,
             "error": "allowed_paths must be a list.",
         }
 
-    planned_files = task.get(
-        "planned_files",
-        [],
-    )
+    planned_files = task.get("planned_files", [])
 
     if not isinstance(planned_files, list):
         return {
@@ -71,7 +68,7 @@ def validate_task(
         for path in planned_files
         if not path_allowed(
             path,
-            task["allowed_paths"],
+            allowed_paths,
         )
     ]
 
@@ -93,14 +90,10 @@ def validate_task(
     }
 
 
-def load_task(
-    path: Path,
-) -> dict[str, Any]:
+def load_task(path: Path) -> dict[str, Any]:
     try:
         task = json.loads(
-            path.read_text(
-                encoding="utf-8",
-            )
+            path.read_text(encoding="utf-8")
         )
     except Exception as exc:
         raise RuntimeError(
@@ -129,10 +122,7 @@ def plan_task(
         "phase": task["phase"],
         "objective": task["objective"],
         "allowed_paths": task["allowed_paths"],
-        "planned_files": task.get(
-            "planned_files",
-            [],
-        ),
+        "planned_files": task.get("planned_files", []),
     }
 
 
@@ -140,7 +130,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Guarded autonomous task provider"
     )
-
     parser.add_argument(
         "--task",
         type=Path,
@@ -149,17 +138,16 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    result = plan_task(
-        load_task(args.task)
-    )
+    try:
+        task = load_task(args.task)
+        result = plan_task(task)
+    except RuntimeError as exc:
+        result = {
+            "passed": False,
+            "error": str(exc),
+        }
 
-    print(
-        json.dumps(
-            result,
-            indent=2,
-        )
-    )
-
+    print(json.dumps(result, indent=2))
     return 0 if result["passed"] else 1
 
 
