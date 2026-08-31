@@ -127,9 +127,16 @@ def linux_build():
 
 
 def validate_security():
+    boundary_path = (
+        ROOT / "flutter_app/lib/core/security/security_boundary.dart"
+    )
+    pipeline_path = (
+        ROOT / "flutter_app/lib/core/pipeline/decision_pipeline.dart"
+    )
+
     required_files = [
-        ROOT / "flutter_app/lib/core/security/security_boundary.dart",
-        ROOT / "flutter_app/lib/core/pipeline/decision_pipeline.dart",
+        boundary_path,
+        pipeline_path,
     ]
 
     missing = [
@@ -147,36 +154,69 @@ def validate_security():
             ),
         }
 
-    boundary = required_files[0].read_text()
-    pipeline = required_files[1].read_text()
+    boundary = boundary_path.read_text()
+    pipeline = pipeline_path.read_text()
 
-    required_tokens = [
+    required_boundary_markers = [
+        "class SecurityBoundary",
+        "canClientOverrideAuthorization()",
+        "return false;",
+        "requiresServerAuthorization(",
+        "allowsExecution(",
         "authorization.isAuthorized",
         "entitlement.isActive",
         "decision.allowed",
     ]
 
-    missing_tokens = [
-        token
-        for token in required_tokens
-        if token not in boundary
+    missing_boundary_markers = [
+        marker
+        for marker in required_boundary_markers
+        if marker not in boundary
     ]
 
-    if "security_boundary" not in pipeline:
-        missing_tokens.append("security_boundary")
-
-    if missing_tokens:
+    if missing_boundary_markers:
         return {
             "passed": False,
             "output": (
                 "Security boundary markers missing:\n"
-                + "\n".join(f"- {item}" for item in missing_tokens)
+                + "\n".join(
+                    f"- {item}"
+                    for item in missing_boundary_markers
+                )
+            ),
+        }
+
+    required_pipeline_markers = [
+        "authorizationService.authorize(",
+        "entitlementService.resolve(",
+        "decisionEngine.evaluate(",
+        "evidenceService.record(",
+    ]
+
+    missing_pipeline_markers = [
+        marker
+        for marker in required_pipeline_markers
+        if marker not in pipeline
+    ]
+
+    if missing_pipeline_markers:
+        return {
+            "passed": False,
+            "output": (
+                "Decision pipeline security integration markers missing:\n"
+                + "\n".join(
+                    f"- {item}"
+                    for item in missing_pipeline_markers
+                )
             ),
         }
 
     return {
         "passed": True,
-        "output": "Security boundary markers validated.",
+        "output": (
+            "Security boundary architecture and decision pipeline "
+            "integration validated."
+        ),
     }
 
 
