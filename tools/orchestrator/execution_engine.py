@@ -184,6 +184,11 @@ def main() -> int:
         "--execute",
         action="store_true",
     )
+    parser.add_argument(
+        "--allow-worktree-changes",
+        action="store_true",
+        help="Allow upstream guarded mutations during validation.",
+    )
     args = parser.parse_args()
 
     registry = load_json(REGISTRY)
@@ -220,7 +225,9 @@ def main() -> int:
     validate_paths(spec)
     print("[PASS] allowed-path guard")
 
-    if not changed_paths():
+    if args.allow_worktree_changes:
+        print("[PASS] working tree change allowance")
+    elif not changed_paths():
         print("[PASS] working tree clean")
     else:
         raise RuntimeError(

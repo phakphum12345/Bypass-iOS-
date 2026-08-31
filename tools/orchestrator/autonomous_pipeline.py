@@ -9,14 +9,24 @@ from pathlib import Path
 from typing import Any
 
 from tools.orchestrator.git_provider import LocalGitProvider
+from tools.orchestrator.mutation_provider import (
+    apply as apply_mutation,
+    dry_run as mutation_dry_run,
+)
 from tools.orchestrator.pipeline_state import transition
+from tools.orchestrator.task_provider import (
+    load_task,
+    plan_task,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
 ORCH = ROOT / "tools" / "orchestrator"
 REGISTRY = ORCH / "phase_registry.json"
 POLICY = ORCH / "execution_policy.json"
-DEFAULT_STATE = Path("/tmp/bypass-ios-autonomous-pipeline.json")
+DEFAULT_STATE = Path(
+    "/tmp/bypass-ios-autonomous-pipeline.json"
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -87,14 +97,55 @@ def dependencies_complete(
     )
 
 
+def validate_plan_against_phase(
+    plan: dict[str, Any],
+    phase: dict[str, Any],
+) -> dict[str, Any]:
+    task_allowed = set(
+        plan["allowed_paths"]
+    )
+    phase_allowed = set(
+        phase.get(
+            "allowed_paths",
+            [],
+        )
+    )
+
+    invalid_task_scope = sorted(
+        task_allowed - phase_allowed
+    )
+
+    if invalid_task_scope:
+        return {
+            "passed": False,
+            "error": (
+                "Task allowed_paths exceed phase allowed_paths:\n"
+                + "\n".join(
+                    f"- {path}"
+                    for path in invalid_task_scope
+                )
+            ),
+        }
+
+    return {
+        "passed": True,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Guarded autonomous phase pipeline"
+        description="Guarded autonomous task pipeline"
     )
 
     parser.add_argument(
         "--phase",
         type=int,
+        required=True,
+    )
+
+    parser.add_argument(
+        "--task",
+        type=Path,
         required=True,
     )
 
@@ -109,6 +160,11 @@ def main() -> int:
         action="store_true",
     )
 
+    parser.add_argument(
+        "--commit-message",
+        default=None,
+    )
+
     args = parser.parse_args()
 
     registry = load_json(REGISTRY)
@@ -118,6 +174,19 @@ def main() -> int:
     phase = phase_by_id(
         registry,
         args.phase,
+    )
+
+    print("=" * 60)
+    print("AUTONOMOUS TASK PIPELINE")
+    print("=" * 60)
+    print(
+        f"Project : {registry.get('project', 'unknown')}"
+    )
+    print(
+        f"Phase   : {phase['id']} — {phase['name']}"
+    )
+    print(
+        f"Mode    : {'execute' if args.execute else 'preview'}"
     )
 
     completed = set(
@@ -131,28 +200,86 @@ def main() -> int:
         phase,
         completed,
     ):
-        raise RuntimeError(
+        error = (
             f"Dependencies incomplete for phase {args.phase}"
         )
 
-    print("=" * 60)
-    print("AUTONOMOUS PHASE PIPELINE")
-    print("=" * 60)
-    print(
-        f"Project : {registry.get('project', 'unknown')}"
-    )
-    print(
-        f"Phase   : {phase['id']} — {phase['name']}"
-    )
-    print(
-        f"Mode    : {'execute' if args.execute else 'preview'}"
-    )
+        state["status"] = "failed"
+        state["current_phase"] = args.phase
+        state.setdefault(
+            "failures",
+            [],
+        ).append({
+            "stage": "planned",
+            "error": error,
+        })
+        save_json(args.state, state)
+
+        print(error)
+        return 1
 
     # ----------------------------------------------------------
-    # QUEUED -> PLANNED
+    # TASK / PLAN
     # ----------------------------------------------------------
+
+    try:
+        task = load_task(args.task)
+        plan = plan_task(task)
+    except Exception as exc:
+        state["status"] = "failed"
+        state["current_phase"] = args.phase
+        state.setdefault(
+            "failures",
+            [],
+        ).append({
+            "stage": "planned",
+            "error": str(exc),
+        })
+        save_json(args.state, state)
+        print(f"[FAIL] task: {exc}")
+        return 1
+
+    if not plan["passed"]:
+        state["status"] = "failed"
+        state["current_phase"] = args.phase
+        state.setdefault(
+            "failures",
+            [],
+        ).append({
+            "stage": "planned",
+            "error": plan["error"],
+        })
+        save_json(args.state, state)
+        print(
+            "[FAIL] task plan:",
+            plan["error"],
+        )
+        return 1
+
+    phase_scope = validate_plan_against_phase(
+        plan,
+        phase,
+    )
+
+    if not phase_scope["passed"]:
+        state["status"] = "failed"
+        state["current_phase"] = args.phase
+        state.setdefault(
+            "failures",
+            [],
+        ).append({
+            "stage": "planned",
+            "error": phase_scope["error"],
+        })
+        save_json(args.state, state)
+        print(
+            "[FAIL] phase scope:",
+            phase_scope["error"],
+        )
+        return 1
 
     state["current_phase"] = args.phase
+    state["task_id"] = plan["task_id"]
 
     transition(
         state,
@@ -164,25 +291,104 @@ def main() -> int:
     )
 
     state["status"] = "planned"
-    save_json(
-        args.state,
-        state,
-    )
+    save_json(args.state, state)
 
-    print("[PASS] queued")
-    print("[PASS] planned")
+    print("[PASS] task")
+    print("[PASS] plan")
+    print()
+
+    # ----------------------------------------------------------
+    # PREVIEW
+    # ----------------------------------------------------------
 
     if not args.execute:
-        print("[LOCK] mutation disabled")
-        print("[LOCK] commit disabled")
-        print("[LOCK] push disabled")
-        print("[LOCK] PR disabled")
-        print("[LOCK] merge disabled")
+        mutation_preview = mutation_dry_run(
+            task
+        )
+
+        if not mutation_preview["passed"]:
+            print(
+                "[FAIL] mutation plan:",
+                mutation_preview["error"],
+            )
+            return 1
+
+        print("[PASS] mutation dry-run")
+        print("[LOCK] source mutation")
+        print("[LOCK] commit")
+        print("[LOCK] push")
+        print("[LOCK] PR")
+        print("[LOCK] merge")
         return 0
 
     # ----------------------------------------------------------
-    # EXECUTION ENGINE
+    # MUTATION
     # ----------------------------------------------------------
+
+    if not policy.get(
+        "allow_source_mutation",
+        False,
+    ):
+        state["status"] = "planned"
+        state["current_phase"] = args.phase
+        save_json(args.state, state)
+
+        print("[PASS] plan")
+        print("[LOCK] source mutation disabled")
+        return 0
+
+    mutation_result = apply_mutation(
+        task
+    )
+
+    if not mutation_result["passed"]:
+        state["status"] = "failed"
+        state["current_phase"] = args.phase
+        state.setdefault(
+            "failures",
+            [],
+        ).append({
+            "stage": "mutated",
+            "error": mutation_result["error"],
+        })
+        save_json(args.state, state)
+
+        print(
+            "[FAIL] mutation:",
+            mutation_result["error"],
+        )
+        return 1
+
+    transition(
+        state,
+        "generated",
+    )
+    transition(
+        state,
+        "mutated",
+    )
+
+    state["status"] = "mutated"
+    state["mutation"] = {
+        "changed_paths": mutation_result[
+            "changed_paths"
+        ],
+    }
+
+    save_json(args.state, state)
+
+    print("[PASS] mutation")
+
+    # ----------------------------------------------------------
+    # VALIDATION
+    # ----------------------------------------------------------
+
+    transition(
+        state,
+        "validating",
+    )
+    state["status"] = "validating"
+    save_json(args.state, state)
 
     executor = [
         "python3",
@@ -193,62 +399,44 @@ def main() -> int:
         "--state",
         str(args.state),
         "--execute",
+        "--allow-worktree-changes",
     ]
 
-    result = run(executor)
+    validation = run(executor)
 
     print()
-    print(result["output"])
+    print(validation["output"])
 
-    if not result["passed"]:
+    if not validation["passed"]:
         state["status"] = "failed"
         state["current_phase"] = args.phase
         state.setdefault(
             "failures",
             [],
         ).append({
-            "stage": "validation",
-            "error": result["output"],
+            "stage": "validating",
+            "error": validation["output"],
         })
-        save_json(
-            args.state,
-            state,
-        )
+        save_json(args.state, state)
         return 1
 
     # ----------------------------------------------------------
-    # VALIDATING -> FINAL VALIDATED
+    # FINAL VALIDATION
     # ----------------------------------------------------------
 
-    transition(
-        state,
-        "validating",
-    )
-    state["status"] = "validating"
-    state["current_phase"] = args.phase
-
-    # The current execution engine performs guarded validation,
-    # but does not yet provide a real source-generation/mutation
-    # provider for Phase 6+.
     transition(
         state,
         "final_validated",
     )
 
     state["status"] = "final_validated"
+    state["validation"] = {
+        "passed": True,
+    }
     state["current_phase"] = args.phase
 
-    state.setdefault(
-        "validation",
-        {},
-    )["passed"] = True
+    save_json(args.state, state)
 
-    save_json(
-        args.state,
-        state,
-    )
-
-    print("[PASS] validating")
     print("[PASS] final validation")
 
     # ----------------------------------------------------------
@@ -257,29 +445,21 @@ def main() -> int:
 
     git = LocalGitProvider()
 
-    allow_commit = bool(
-        policy.get(
-            "allow_git_commit",
-            False,
-        )
-    )
-
-    if not allow_commit:
+    if not policy.get(
+        "allow_git_commit",
+        False,
+    ):
         print("[LOCK] commit disabled")
         print("[LOCK] push disabled")
         print("[LOCK] PR disabled")
         print("[LOCK] merge disabled")
-
-        # Important: phase is NOT completed here.
-        # It remains final_validated until commit is enabled.
         return 0
 
-    commit_message = (
-        f"feat: autonomous phase {args.phase} execution"
-    )
-
     commit_result = git.commit(
-        message=commit_message,
+        message=(
+            args.commit_message
+            or f"feat: autonomous phase {args.phase}"
+        ),
         allowed_paths=phase.get(
             "allowed_paths",
             [],
@@ -301,10 +481,7 @@ def main() -> int:
                 or commit_result.output
             ),
         })
-        save_json(
-            args.state,
-            state,
-        )
+        save_json(args.state, state)
         return 1
 
     transition(
@@ -314,19 +491,15 @@ def main() -> int:
 
     state["status"] = "committed"
     state["commit"] = {
-        "message": commit_message,
         "metadata": commit_result.metadata,
     }
 
-    save_json(
-        args.state,
-        state,
-    )
+    save_json(args.state, state)
 
     print("[PASS] commit")
 
     # ----------------------------------------------------------
-    # PUSH
+    # REMOTE LIFECYCLE
     # ----------------------------------------------------------
 
     if not policy.get(
@@ -345,20 +518,9 @@ def main() -> int:
     ])
 
     if not branch_result["passed"]:
-        state["status"] = "failed"
-        state["current_phase"] = args.phase
-        state.setdefault(
-            "failures",
-            [],
-        ).append({
-            "stage": "pushed",
-            "error": branch_result["output"],
-        })
-        save_json(
-            args.state,
-            state,
+        raise RuntimeError(
+            branch_result["output"]
         )
-        return 1
 
     branch = branch_result["output"].strip()
 
@@ -380,10 +542,7 @@ def main() -> int:
                 or push_result.output
             ),
         })
-        save_json(
-            args.state,
-            state,
-        )
+        save_json(args.state, state)
         return 1
 
     transition(
@@ -392,16 +551,9 @@ def main() -> int:
     )
 
     state["status"] = "pushed"
-    save_json(
-        args.state,
-        state,
-    )
+    save_json(args.state, state)
 
     print("[PASS] push")
-
-    # ----------------------------------------------------------
-    # PR
-    # ----------------------------------------------------------
 
     if not policy.get(
         "allow_pull_request",
@@ -417,10 +569,11 @@ def main() -> int:
             "default_base",
             "main",
         ),
-        title=f"feat: autonomous phase {args.phase}",
+        title=(
+            f"feat: autonomous phase {args.phase}"
+        ),
         body=(
-            "Autonomous pipeline execution "
-            f"for phase {args.phase}."
+            f"Autonomous execution for phase {args.phase}."
         ),
         execute=True,
     )
@@ -438,10 +591,7 @@ def main() -> int:
                 or pr_result.output
             ),
         })
-        save_json(
-            args.state,
-            state,
-        )
+        save_json(args.state, state)
         return 1
 
     transition(
@@ -450,19 +600,15 @@ def main() -> int:
     )
 
     state["status"] = "pr_open"
-    save_json(
-        args.state,
-        state,
-    )
+    state["pr"] = {
+        "output": pr_result.output,
+    }
+    save_json(args.state, state)
 
     print("[PASS] PR")
 
-    # ----------------------------------------------------------
-    # CI
-    # ----------------------------------------------------------
-
     ci_result = git.ci_status(
-        branch=branch,
+        branch,
         execute=True,
     )
 
@@ -479,10 +625,7 @@ def main() -> int:
                 or ci_result.output
             ),
         })
-        save_json(
-            args.state,
-            state,
-        )
+        save_json(args.state, state)
         return 1
 
     transition(
@@ -496,10 +639,6 @@ def main() -> int:
 
     state["status"] = "ci_passed"
 
-    # ----------------------------------------------------------
-    # COMPLETED
-    # ----------------------------------------------------------
-
     transition(
         state,
         "completed",
@@ -507,23 +646,16 @@ def main() -> int:
 
     state["status"] = "completed"
     state["current_phase"] = None
-
-    completed.add(
-        args.phase
-    )
+    completed.add(args.phase)
     state["completed_phases"] = sorted(
         completed
     )
 
-    save_json(
-        args.state,
-        state,
-    )
+    save_json(args.state, state)
 
     print("[PASS] CI")
-    print()
     print("=" * 60)
-    print("AUTONOMOUS PHASE PIPELINE: COMPLETED")
+    print("AUTONOMOUS TASK PIPELINE: COMPLETED")
     print("=" * 60)
 
     return 0
