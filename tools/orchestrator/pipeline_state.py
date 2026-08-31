@@ -27,7 +27,11 @@ STAGES = [
 
 ALLOWED_TRANSITIONS = {
     "queued": {"planned", "failed"},
-    "planned": {"generated", "failed"},
+    "planned": {
+        "generated",
+        "validating",
+        "failed",
+    },
     "generated": {"mutated", "failed"},
     "mutated": {"validating", "failed"},
     "validating": {
