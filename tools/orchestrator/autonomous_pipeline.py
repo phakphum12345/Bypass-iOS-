@@ -489,6 +489,18 @@ def main() -> int:
         )
     )
 
+    executor = [
+        "python3",
+        "-m",
+        "tools.orchestrator.execution_engine",
+        "--phase",
+        str(args.phase),
+        "--state",
+        str(args.state),
+        "--execute",
+        "--allow-worktree-changes",
+    ]
+
     attempts = 0
     gate_results: list[dict[str, Any]] = []
 
