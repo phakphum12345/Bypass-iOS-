@@ -189,7 +189,7 @@ def main() -> int:
         target = ROOT / "docs/architecture/.repair_loop_fixture.tmp"
 
         target.write_text(
-            "FAIL\\n",
+            "FAIL\n",
             encoding="utf-8",
         )
 
@@ -236,7 +236,7 @@ def main() -> int:
                         ],
                         "changes": {
                             "docs/architecture/.repair_loop_fixture.tmp":
-                                "PASS\\n"
+                                "PASS\n"
                         },
                     },
                     failures=[failure],
