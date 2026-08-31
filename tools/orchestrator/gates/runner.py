@@ -3,7 +3,7 @@ from __future__ import annotations
 from .registry import COMMAND_GATES, run_command
 
 
-def run_gate(name: str):
+def run_gate(name: str, phase_id: int | None = None):
     if name not in COMMAND_GATES:
         return {
             "gate": name,
@@ -11,7 +11,12 @@ def run_gate(name: str):
             "error": f"Unknown gate: {name}",
         }
 
-    spec = COMMAND_GATES[name]()
+    factory = COMMAND_GATES[name]
+
+    if name == "contract_validation":
+        spec = factory(phase_id or 6)
+    else:
+        spec = factory()
 
     validator = spec.get("validator")
 
@@ -20,7 +25,9 @@ def run_gate(name: str):
 
         return {
             "gate": name,
-            "cwd": str(spec["cwd"].relative_to(spec["cwd"].anchor)),
+            "cwd": str(
+                spec["cwd"].relative_to(spec["cwd"].anchor)
+            ),
             **result,
         }
 
@@ -35,11 +42,17 @@ def run_gate(name: str):
     }
 
 
-def run_gates(gates: list[str]):
+def run_gates(
+    gates: list[str],
+    phase_id: int | None = None,
+):
     results = []
 
     for gate in gates:
-        result = run_gate(gate)
+        result = run_gate(
+            gate,
+            phase_id=phase_id,
+        )
         results.append(result)
 
         if not result["passed"]:
