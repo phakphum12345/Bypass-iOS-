@@ -1,72 +1,196 @@
-name: Windows Release Build
+name: Windows Release
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag"
+        required: true
+        type: string
 
 permissions:
-  contents: read
+  contents: write
 
-env:
-  FLUTTER_VERSION: '3.44.4'
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  windows-build:
+  build-release:
+    name: Build Windows Release
     runs-on: windows-latest
+
     defaults:
       run:
-        working-directory: flutter_app
+        shell: pwsh
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
-          cache: true
+
+      - name: Flutter version
+        run: |
+          flutter --version
+          dart --version
+
+      - name: Verify Windows project
+        working-directory: flutter_app
+        run: |
+          if (-not (Test-Path "windows/CMakeLists.txt")) {
+            throw "Windows project is missing."
+          }
 
       - name: Install dependencies
-        run: flutter pub get
+        working-directory: flutter_app
+        run: |
+          flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        working-directory: flutter_app
+        run: |
+          flutter analyze
 
       - name: Test
-        run: flutter test
+        working-directory: flutter_app
+        run: |
+          flutter test
 
       - name: Build Windows release
-        run: flutter build windows --release
-
-      - name: Verify executable
-        shell: pwsh
+        working-directory: flutter_app
         run: |
-          $exe = Get-ChildItem -Path build/windows -Filter *.exe -Recurse | Select-Object -First 1
-          if (-not $exe) {
-            Write-Error "Windows executable not found"
-            exit 1
+          flutter build windows --release
+
+      - name: Verify EXE
+        working-directory: flutter_app
+        run: |
+          $exe = Get-ChildItem `
+            -Path "build/windows/x64/runner/Release" `
+            -Filter "*.exe" `
+            -File `
+            -Recurse `
+            | Select-Object -First 1
+
+          if ($null -eq $exe) {
+            throw "No Windows EXE was produced."
           }
-          Write-Host "Found executable: $($exe.FullName)"
-          Get-Item $exe.FullName | Format-List FullName,Length
 
-      - name: Package Windows release
-        shell: pwsh
+          if ($exe.Length -le 0) {
+            throw "Windows EXE is empty."
+          }
+
+          Write-Host "EXE:"
+          Write-Host $exe.FullName
+          Write-Host "Size:"
+          Write-Host $exe.Length
+
+      - name: Prepare release package
+        working-directory: flutter_app
         run: |
-          Compress-Archive `
-            -Path build/windows/x64/runner/Release/* `
-            -DestinationPath ../bypass-architecture-reference-windows-x64.zip `
+          $source = "build/windows/x64/runner/Release"
+          $target = "build/release/bypass-ios-windows-x64"
+
+          if (Test-Path $target) {
+            Remove-Item `
+              $target `
+              -Recurse `
+              -Force
+          }
+
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path $target `
+            | Out-Null
+
+          Copy-Item `
+            -Path "$source/*" `
+            -Destination $target `
+            -Recurse `
             -Force
 
-      - name: Upload Windows artifact
+      - name: Create ZIP
+        working-directory: flutter_app
+        run: |
+          $zip = "build/release/bypass-ios-windows-x64.zip"
+
+          if (Test-Path $zip) {
+            Remove-Item `
+              $zip `
+              -Force
+          }
+
+          Compress-Archive `
+            -Path "build/release/bypass-ios-windows-x64/*" `
+            -DestinationPath $zip `
+            -CompressionLevel Optimal
+
+          if (-not (Test-Path $zip)) {
+            throw "ZIP creation failed."
+          }
+
+      - name: Generate SHA256
+        working-directory: flutter_app
+        run: |
+          $zip = "build/release/bypass-ios-windows-x64.zip"
+
+          $hash = (
+            Get-FileHash `
+              $zip `
+              -Algorithm SHA256
+          ).Hash
+
+          "$hash  bypass-ios-windows-x64.zip" |
+            Set-Content `
+              -Path "build/release/SHA256SUMS.txt" `
+              -Encoding utf8
+
+          Write-Host "SHA256:"
+          Write-Host $hash
+
+      - name: Verify release package
+        working-directory: flutter_app
+        run: |
+          $zip = "build/release/bypass-ios-windows-x64.zip"
+
+          if (-not (Test-Path $zip)) {
+            throw "Release ZIP missing."
+          }
+
+          $size = (
+            Get-Item $zip
+          ).Length
+
+          if ($size -le 0) {
+            throw "Release ZIP is empty."
+          }
+
+          Write-Host "Release ZIP size: $size bytes"
+
+      - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bypass-architecture-reference-windows-x64
-          path: bypass-architecture-reference-windows-x64.zip
+          name: bypass-ios-windows-x64-release
+          path: |
+            flutter_app/build/release/bypass-ios-windows-x64.zip
+            flutter_app/build/release/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            flutter_app/build/release/bypass-ios-windows-x64.zip
+            flutter_app/build/release/SHA256SUMS.txt
