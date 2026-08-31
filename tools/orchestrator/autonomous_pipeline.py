@@ -147,7 +147,7 @@ def main() -> int:
     parser.add_argument(
         "--task",
         type=Path,
-        required=True,
+        required=False,
     )
 
     parser.add_argument(
@@ -165,8 +165,16 @@ def main() -> int:
         "--commit-message",
         default=None,
     )
+    parser.add_argument(
+        "--test-repair-loop",
+        action="store_true",
+        help="Run deterministic local repair-loop validation.",
+    )
 
     args = parser.parse_args()
+
+    if not args.test_repair_loop and args.task is None:
+        parser.error("--task is required unless --test-repair-loop is used")
 
     registry = load_json(REGISTRY)
     policy = load_json(POLICY)
@@ -177,7 +185,97 @@ def main() -> int:
         args.phase,
     )
 
-    print("=" * 60)
+    if args.test_repair_loop:
+        target = ROOT / "docs/architecture/.repair_loop_fixture.tmp"
+
+        target.write_text(
+            "FAIL\\n",
+            encoding="utf-8",
+        )
+
+        attempts = 0
+        failures: list[dict[str, Any]] = []
+
+        try:
+            while attempts < 3:
+                attempts += 1
+
+                passed = (
+                    target.read_text(
+                        encoding="utf-8",
+                    ).strip()
+                    == "PASS"
+                )
+
+                if passed:
+                    print(
+                        f"[PASS] repair-loop gate on attempt {attempts}"
+                    )
+                    break
+
+                failure = {
+                    "gate": "deterministic_repair_fixture",
+                    "passed": False,
+                    "attempt": attempts,
+                }
+                failures.append(failure)
+
+                print(
+                    f"[FAIL] repair-loop gate "
+                    f"attempt {attempts}/3"
+                )
+
+                repair_result = repair_with_provider(
+                    repair_plan={
+                        "phase": args.phase,
+                        "allowed_paths": [
+                            "docs/architecture/"
+                        ],
+                        "planned_files": [
+                            "docs/architecture/.repair_loop_fixture.tmp"
+                        ],
+                        "changes": {
+                            "docs/architecture/.repair_loop_fixture.tmp":
+                                "PASS\\n"
+                        },
+                    },
+                    failures=[failure],
+                    attempt=attempts,
+                    max_attempts=3,
+                )
+
+                print(
+                    "[REPAIR]",
+                    repair_result,
+                )
+
+                if not repair_result["passed"]:
+                    print("[FAIL] repair provider")
+                    return 1
+
+            final_pass = (
+                target.read_text(
+                    encoding="utf-8",
+                ).strip()
+                == "PASS"
+            )
+
+            print(
+                "[PASS] repair-loop final ="
+                if final_pass
+                else "[FAIL] repair-loop final =",
+                final_pass,
+            )
+
+            print("[PASS] attempts =", attempts)
+
+            if not final_pass:
+                return 1
+
+            return 0
+
+        finally:
+            target.unlink(missing_ok=True)
     print("AUTONOMOUS TASK PIPELINE")
     print("=" * 60)
     print(
