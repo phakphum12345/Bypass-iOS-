@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "phase": 8,
+  "name": "documentation-consistency",
+  "contract": "docs/architecture/PHASE_8_CONTRACT.md",
+  "objective": "Ensure architecture documentation remains canonical, internally consistent, and aligned with the implemented defensive security boundary.",
+  "required_invariants": [
+    "documentation_is_canonical",
+    "architecture_references_are_consistent",
+    "security_boundary_documentation_is_preserved",
+    "documentation_does_not_claim_unsupported_capabilities"
+  ],
+  "required_test_categories": [
+    "documentation_validation",
+    "canonical_contract_consistency",
+    "security_boundary_documentation"
+  ],
+  "allowed_paths": [
+    "docs/architecture/"
+  ],
+  "forbidden_behaviors": [
+    "platform_security_bypass",
+    "unauthorized_execution",
+    "client_side_authorization",
+    "entitlement_escalation",
+    "ui_authorization_override",
+    "evidence_based_authorization"
+  ],
+  "completion_criteria": [
+    "documentation_validation_passes",
+    "git_diff_check_passes",
+    "no_changes_outside_allowed_paths"
+  ],
+  "max_repair_attempts": 3
+}
