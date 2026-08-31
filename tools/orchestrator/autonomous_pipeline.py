@@ -217,9 +217,19 @@ def main() -> int:
         return 1
 
     # ----------------------------------------------------------
-    # FINAL VALIDATION
+    # VALIDATING -> FINAL VALIDATED
     # ----------------------------------------------------------
 
+    transition(
+        state,
+        "validating",
+    )
+    state["status"] = "validating"
+    state["current_phase"] = args.phase
+
+    # The current execution engine performs guarded validation,
+    # but does not yet provide a real source-generation/mutation
+    # provider for Phase 6+.
     transition(
         state,
         "final_validated",
@@ -238,6 +248,7 @@ def main() -> int:
         state,
     )
 
+    print("[PASS] validating")
     print("[PASS] final validation")
 
     # ----------------------------------------------------------
