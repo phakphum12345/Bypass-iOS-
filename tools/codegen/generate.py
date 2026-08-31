@@ -242,10 +242,6 @@ def main():
     print(f"Version : {schema['version']}")
     print(f"Output  : {schema['output_root']}")
 
-    print()
-    print("[1/7] Preparing directories")
-    ensure_dirs()
-
     paths = all_files(schema)
 
     if args.files:
@@ -266,12 +262,17 @@ def main():
 
     if args.dry_run:
         print()
+        print("[DRY-RUN] Directory creation skipped")
         print("===== DRY RUN =====")
         for path in paths:
             print(f"[WOULD GENERATE] {path.relative_to(ROOT)}")
         print()
         print(f"Dry-run complete: {len(paths)} file(s).")
         return 0
+
+    print()
+    print("[1/7] Preparing directories")
+    ensure_dirs()
 
     print()
     print("[2/7] Preparing canonical templates")
