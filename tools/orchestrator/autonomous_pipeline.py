@@ -499,6 +499,7 @@ def main() -> int:
         str(args.state),
         "--execute",
         "--allow-worktree-changes",
+        "--validation-only",
     ]
 
     attempts = 0

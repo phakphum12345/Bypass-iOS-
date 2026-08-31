@@ -189,6 +189,14 @@ def main() -> int:
         action="store_true",
         help="Allow upstream guarded mutations during validation.",
     )
+    parser.add_argument(
+        "--validation-only",
+        action="store_true",
+        help=(
+            "Run phase validation without owning lifecycle "
+            "completion state."
+        ),
+    )
     args = parser.parse_args()
 
     registry = load_json(REGISTRY)
@@ -256,7 +264,7 @@ def main() -> int:
     )
 
     if passed:
-        if args.execute:
+        if args.execute and not args.validation_only:
             completed = set(
                 state.get(
                     "completed_phases",
