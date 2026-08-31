@@ -153,85 +153,17 @@ def validate_paths(
         )
 
 
-def run_phase_gate(
-    gate: str,
-) -> dict[str, Any]:
-    flutter_app = ROOT / "flutter_app"
-
-    commands: dict[str, tuple[list[str], Path]] = {
-        "dart_format": (
-            [
-                "dart",
-                "format",
-                "--output=none",
-                "--set-exit-if-changed",
-                "lib",
-                "test",
-            ],
-            flutter_app,
-        ),
-        "flutter_analyze": (
-            ["flutter", "analyze"],
-            flutter_app,
-        ),
-        "flutter_test": (
-            ["flutter", "test"],
-            flutter_app,
-        ),
-        "git_diff_check": (
-            ["git", "diff", "--check"],
-            ROOT,
-        ),
-    }
-
-    if gate == "contract_validation":
-        command = [
-            "python3",
-            "-c",
-            (
-                "from tools.orchestrator.gates.contract "
-                "import contract_validation; "
-                "r = contract_validation(); "
-                "print(r); "
-                "raise SystemExit(0 if r['passed'] else 1)"
-            ),
-        ]
-        result = run(command, ROOT)
-    elif gate in commands:
-        command, cwd = commands[gate]
-        result = run(command, cwd)
-    else:
-        return {
-            "gate": gate,
-            "passed": False,
-            "returncode": 1,
-            "error": f"Unsupported gate: {gate}",
-            "output": "",
-        }
-
-    result["gate"] = gate
-    return result
-
-
 def run_gates(
     phase: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    results: list[dict[str, Any]] = []
+    from tools.orchestrator.gates.runner import (
+        run_gates as runner_run_gates,
+    )
 
-    for gate in phase.get("gates", []):
-        result = run_phase_gate(gate)
-        results.append(result)
-
-        print(
-            f"[{'PASS' if result['passed'] else 'FAIL'}] "
-            f"{gate}"
-        )
-
-        if not result["passed"]:
-            print(result.get("output", "").rstrip())
-            break
-
-    return results
+    return runner_run_gates(
+        phase.get("gates", []),
+        phase_id=phase["id"],
+    )
 
 
 def main() -> int:
