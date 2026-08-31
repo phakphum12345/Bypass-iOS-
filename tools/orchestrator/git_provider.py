@@ -138,6 +138,16 @@ def commit(
             error="Commit blocked: working tree is clean.",
         )
 
+    if not execute:
+        return ProviderResult(
+            passed=True,
+            output="Commit dry-run passed.",
+            metadata={
+                "dry_run": True,
+                "message": message,
+            },
+        )
+
     add = run([
         "git",
         "add",
@@ -161,16 +171,6 @@ def commit(
 
     if not diff_check.passed:
         return diff_check
-
-    if not execute:
-        return ProviderResult(
-            passed=True,
-            output="Commit dry-run passed.",
-            metadata={
-                "dry_run": True,
-                "message": message,
-            },
-        )
 
     return run([
         "git",
