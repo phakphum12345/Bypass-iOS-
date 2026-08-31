@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
 from pathlib import Path
 from typing import Callable
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -62,21 +64,47 @@ def validate_mutation(
     violations = [
         path
         for path in changed
-        if not path_allowed(path, allowed_paths)
+        if not path_allowed(
+            path,
+            allowed_paths,
+        )
     ]
 
     return not violations, violations
 
 
-def snapshot() -> set[str]:
-    return set(git_changed_paths())
+def file_digest(path: Path) -> str:
+    return hashlib.sha256(
+        path.read_bytes()
+    ).hexdigest()
+
+
+def snapshot() -> dict[str, str]:
+    paths = set(git_changed_paths())
+    result: dict[str, str] = {}
+
+    for relative in paths:
+        path = ROOT / relative
+
+        if path.is_file():
+            result[relative] = file_digest(path)
+        else:
+            result[relative] = "<missing>"
+
+    return result
 
 
 def mutation_delta(
-    before: set[str],
-    after: set[str],
+    before: dict[str, str],
+    after: dict[str, str],
 ) -> list[str]:
-    return sorted(after - before)
+    paths = set(before) | set(after)
+
+    return sorted(
+        path
+        for path in paths
+        if before.get(path) != after.get(path)
+    )
 
 
 def run_mutation(
@@ -103,6 +131,9 @@ def run_mutation(
         )
 
     return {
-        "changed_paths": mutation_delta(before, after),
+        "changed_paths": mutation_delta(
+            before,
+            after,
+        ),
         "allowed": True,
     }
