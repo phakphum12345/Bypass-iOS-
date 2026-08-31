@@ -225,3 +225,10 @@ __marimo__/
 !flutter_app/test/**
 
 .venv-autonomous/
+
+# Generated source discovery artifacts
+tools/orchestrator/source_manifest.json
+
+# Generated autonomous source artifacts
+tools/orchestrator/source_manifest.json
+tools/orchestrator/source_bundle.json

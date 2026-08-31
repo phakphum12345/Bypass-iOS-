@@ -19,6 +19,14 @@ from tools.orchestrator.task_provider import (
     load_task,
     plan_task,
 )
+from tools.orchestrator.source_discovery import (
+    discover_sources,
+    save_manifest,
+    manifest_dict,
+)
+from tools.orchestrator.source_generator import (
+    run_generator as run_source_generator,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -171,6 +179,23 @@ def main() -> int:
         help="Run deterministic local repair-loop validation.",
     )
 
+    parser.add_argument(
+        "--auto-discover",
+        action="store_true",
+        help=(
+            "Recursively discover source files and "
+            "refresh the source manifest before execution."
+        ),
+    )
+
+    parser.add_argument(
+        "--generator-dry-run",
+        action="store_true",
+        help=(
+            "Run discovered source generation in dry-run mode."
+        ),
+    )
+
     args = parser.parse_args()
 
     if not args.test_repair_loop and args.task is None:
@@ -184,6 +209,71 @@ def main() -> int:
         registry,
         args.phase,
     )
+
+    # ----------------------------------------------------------
+    # SOURCE DISCOVERY
+    # ----------------------------------------------------------
+
+    if args.auto_discover:
+        manifest = discover_sources(
+            source_roots=[
+                "flutter_app/lib",
+                "flutter_app/test",
+            ],
+            extensions=[
+                ".dart",
+            ],
+            excludes=[
+                "**/.git/**",
+                "**/.dart_tool/**",
+                "**/build/**",
+                "**/.idea/**",
+                "**/.vscode/**",
+                "**/*.g.dart",
+                "**/*.freezed.dart",
+            ],
+        )
+
+        manifest_path = (
+            ORCH / "source_manifest.json"
+        )
+
+        save_manifest(
+            manifest,
+            manifest_path,
+        )
+
+        print(
+            f"[PASS] source discovery: "
+            f"{manifest.file_count} files"
+        )
+
+        if args.generator_dry_run:
+            generator_result = run_source_generator(
+                phase=args.phase,
+                manifest=manifest_dict(
+                    manifest
+                ),
+                dry_run=True,
+            )
+
+            print(
+                "[PASS] source generator dry-run"
+                if generator_result["passed"]
+                else "[FAIL] source generator dry-run"
+            )
+
+            if not generator_result["passed"]:
+                print(
+                    generator_result.get(
+                        "output",
+                        generator_result.get(
+                            "error",
+                            "Generator failed.",
+                        ),
+                    )
+                )
+                return 1
 
     if args.test_repair_loop:
         target = ROOT / "docs/architecture/.repair_loop_fixture.tmp"
