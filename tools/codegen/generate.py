@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
+import argparse
 import hashlib
 import json
 import subprocess
@@ -200,10 +201,40 @@ def verify(paths):
     print("DETERMINISTIC VERIFY PASSED")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Deterministic Phase 5 architecture generator"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate generation inputs without writing generated files.",
+    )
+    parser.add_argument(
+        "--phase",
+        type=int,
+        default=5,
+        help="Generation phase. Only phase 5 is currently supported.",
+    )
+    parser.add_argument(
+        "--files",
+        nargs="*",
+        default=None,
+        help="Optional generated file paths to scope generation.",
+    )
+    return parser.parse_args()
+
+
 def main():
     print("=" * 70)
     print("PHASE 5 — REAL DETERMINISTIC CODE GENERATION")
     print("=" * 70)
+
+    args = parse_args()
+
+    if args.phase != 5:
+        print(f"Unsupported generation phase: {args.phase}")
+        return 2
 
     schema = load_schema()
 
@@ -211,11 +242,37 @@ def main():
     print(f"Version : {schema['version']}")
     print(f"Output  : {schema['output_root']}")
 
+    paths = all_files(schema)
+
+    if args.files:
+        requested = {
+            Path(item).as_posix()
+            for item in args.files
+        }
+        paths = [
+            path
+            for path in paths
+            if path.relative_to(ROOT).as_posix() in requested
+        ]
+
+        if not paths:
+            print()
+            print("No requested generated files matched the schema.")
+            return 2
+
+    if args.dry_run:
+        print()
+        print("[DRY-RUN] Directory creation skipped")
+        print("===== DRY RUN =====")
+        for path in paths:
+            print(f"[WOULD GENERATE] {path.relative_to(ROOT)}")
+        print()
+        print(f"Dry-run complete: {len(paths)} file(s).")
+        return 0
+
     print()
     print("[1/7] Preparing directories")
     ensure_dirs()
-
-    paths = all_files(schema)
 
     print()
     print("[2/7] Preparing canonical templates")

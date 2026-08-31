@@ -45,12 +45,261 @@ def git_diff_check():
     }
 
 
+def validate_documentation():
+    required = [
+        ROOT / "docs/architecture/DECISION_PIPELINE.md",
+        ROOT / "docs/architecture/EVIDENCE_AUDIT.md",
+        ROOT / "docs/architecture/PHASE_3_CONTRACT.md",
+        ROOT / "docs/architecture/PHASE_4_CONTRACT.md",
+        ROOT / "docs/architecture/PHASE_5_CONTRACT.md",
+        ROOT / "docs/architecture/PHASE_6_CONTRACT.md",
+        ROOT / "docs/architecture/PHASE_7_CONTRACT.md",
+        ROOT / "docs/architecture/PHASE_8_CONTRACT.md",
+        ROOT / "docs/architecture/PHASE_9_RELEASE_CONTRACT.md",
+        ROOT / "docs/architecture/SECURITY_BOUNDARIES.md",
+    ]
+
+    missing = [
+        str(path.relative_to(ROOT))
+        for path in required
+        if not path.is_file() or not path.read_text().strip()
+    ]
+
+    if missing:
+        return {
+            "passed": False,
+            "output": (
+                "Missing or empty documentation:\n"
+                + "\n".join(f"- {item}" for item in missing)
+            ),
+        }
+
+    competing = list((ROOT / "flutter_app").glob("**/architecture"))
+
+    if competing:
+        return {
+            "passed": False,
+            "output": (
+                "Competing Flutter-local architecture tree found:\n"
+                + "\n".join(
+                    str(path.relative_to(ROOT))
+                    for path in competing
+                )
+            ),
+        }
+
+    return {
+        "passed": True,
+        "output": "Canonical architecture documentation validated.",
+    }
+
+
+def documentation_validation():
+    return {
+        "command": ["documentation-validation"],
+        "cwd": ROOT,
+        "validator": validate_documentation,
+    }
+
+
+def web_build():
+    return {
+        "command": [
+            "flutter",
+            "build",
+            "web",
+            "--release",
+        ],
+        "cwd": FLUTTER_APP,
+    }
+
+
+def linux_build():
+    return {
+        "command": [
+            "flutter",
+            "build",
+            "linux",
+            "--release",
+        ],
+        "cwd": FLUTTER_APP,
+    }
+
+
+def validate_security():
+    boundary_path = (
+        ROOT / "flutter_app/lib/core/security/security_boundary.dart"
+    )
+    pipeline_path = (
+        ROOT / "flutter_app/lib/core/pipeline/decision_pipeline.dart"
+    )
+
+    required_files = [
+        boundary_path,
+        pipeline_path,
+    ]
+
+    missing = [
+        str(path.relative_to(ROOT))
+        for path in required_files
+        if not path.is_file()
+    ]
+
+    if missing:
+        return {
+            "passed": False,
+            "output": (
+                "Missing security files:\n"
+                + "\n".join(f"- {item}" for item in missing)
+            ),
+        }
+
+    boundary = boundary_path.read_text()
+    pipeline = pipeline_path.read_text()
+
+    required_boundary_markers = [
+        "class SecurityBoundary",
+        "canClientOverrideAuthorization()",
+        "return false;",
+        "requiresServerAuthorization(",
+        "allowsExecution(",
+        "authorization.isAuthorized",
+        "entitlement.isActive",
+        "decision.allowed",
+    ]
+
+    missing_boundary_markers = [
+        marker
+        for marker in required_boundary_markers
+        if marker not in boundary
+    ]
+
+    if missing_boundary_markers:
+        return {
+            "passed": False,
+            "output": (
+                "Security boundary markers missing:\n"
+                + "\n".join(
+                    f"- {item}"
+                    for item in missing_boundary_markers
+                )
+            ),
+        }
+
+    required_pipeline_markers = [
+        "authorizationService.authorize(",
+        "entitlementService.resolve(",
+        "decisionEngine.evaluate(",
+        "evidenceService.record(",
+    ]
+
+    missing_pipeline_markers = [
+        marker
+        for marker in required_pipeline_markers
+        if marker not in pipeline
+    ]
+
+    if missing_pipeline_markers:
+        return {
+            "passed": False,
+            "output": (
+                "Decision pipeline security integration markers missing:\n"
+                + "\n".join(
+                    f"- {item}"
+                    for item in missing_pipeline_markers
+                )
+            ),
+        }
+
+    return {
+        "passed": True,
+        "output": (
+            "Security boundary architecture and decision pipeline "
+            "integration validated."
+        ),
+    }
+
+
+def security_validation():
+    return {
+        "command": ["security-validation"],
+        "cwd": ROOT,
+        "validator": validate_security,
+    }
+
+
+def git_sync_check():
+    fetch = subprocess.run(
+        ["git", "fetch", "origin", "main"],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+
+    if fetch.returncode != 0:
+        return {
+            "command": ["git", "fetch", "origin", "main"],
+            "cwd": ROOT,
+            "returncode": fetch.returncode,
+            "passed": False,
+            "output": fetch.stdout,
+        }
+
+    local = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+
+    remote = subprocess.run(
+        ["git", "rev-parse", "origin/main"],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+
+    if local.returncode != 0 or remote.returncode != 0:
+        return {
+            "command": ["git", "rev-parse"],
+            "cwd": ROOT,
+            "returncode": 1,
+            "passed": False,
+            "output": local.stdout + remote.stdout,
+        }
+
+    local_sha = local.stdout.strip()
+    remote_sha = remote.stdout.strip()
+
+    return {
+        "command": ["git", "rev-parse", "HEAD", "origin/main"],
+        "cwd": ROOT,
+        "returncode": 0 if local_sha == remote_sha else 1,
+        "passed": local_sha == remote_sha,
+        "output": (
+            f"HEAD={local_sha}\n"
+            f"origin/main={remote_sha}\n"
+        ),
+    }
+
+
 COMMAND_GATES = {
     "dart_format": dart_format,
     "flutter_analyze": flutter_analyze,
     "flutter_test": flutter_test,
     "git_diff_check": git_diff_check,
     "contract_validation": contract_validation,
+    "documentation_validation": documentation_validation,
+    "web_build": web_build,
+    "linux_build": linux_build,
+    "security_validation": security_validation,
+    "git_sync_check": git_sync_check,
 }
 
 
@@ -61,6 +310,7 @@ def run_command(command: list[str], cwd: Path):
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        check=False,
     )
 
     return {

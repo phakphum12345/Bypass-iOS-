@@ -1,13 +1,21 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 
 
 ROOT = Path(__file__).resolve().parents[3]
 
+PHASE_CONTRACTS = {
+    3: "docs/architecture/PHASE_3_CONTRACT.md",
+    4: "docs/architecture/PHASE_4_CONTRACT.md",
+    5: "docs/architecture/PHASE_5_CONTRACT.md",
+    6: "docs/architecture/PHASE_6_CONTRACT.md",
+    7: "docs/architecture/PHASE_7_CONTRACT.md",
+    8: "docs/architecture/PHASE_8_CONTRACT.md",
+    9: "docs/architecture/PHASE_9_RELEASE_CONTRACT.md",
+}
 
-REQUIRED_RULES = [
+PHASE6_REQUIRED_RULES = [
     "Client state cannot grant authorization.",
     "Denied authorization remains denied.",
     "Entitlement cannot exceed authorization.",
@@ -17,49 +25,79 @@ REQUIRED_RULES = [
 ]
 
 
-def validate_phase6_contract():
-    contract = ROOT / "docs/architecture/PHASE_6_CONTRACT.md"
+def validate_contract_for_phase(phase_id: int):
+    contract_rel = PHASE_CONTRACTS.get(phase_id)
+
+    if contract_rel is None:
+        return {
+            "passed": False,
+            "output": f"No contract mapping for phase {phase_id}.",
+        }
+
+    contract = ROOT / contract_rel
 
     if not contract.is_file():
         return {
             "passed": False,
-            "output": f"Missing contract: {contract}",
+            "output": f"Missing contract: {contract_rel}",
         }
 
     text = contract.read_text()
 
-    missing = [
-        rule for rule in REQUIRED_RULES
-        if rule not in text
-    ]
-
-    if missing:
+    if not text.strip():
         return {
             "passed": False,
-            "output": "Missing Phase 6 rules:\n"
-            + "\n".join(f"- {rule}" for rule in missing),
+            "output": f"Empty contract: {contract_rel}",
         }
 
-    if "No platform-security bypass behavior is implemented." not in text:
-        return {
-            "passed": False,
-            "output": (
-                "Phase 6 defensive research boundary is missing."
-            ),
-        }
+    # Phase 6 retains its explicit defensive security rules.
+    if phase_id == 6:
+        missing = [
+            rule
+            for rule in PHASE6_REQUIRED_RULES
+            if rule not in text
+        ]
+
+        if missing:
+            return {
+                "passed": False,
+                "output": (
+                    "Missing Phase 6 rules:\n"
+                    + "\n".join(
+                        f"- {rule}" for rule in missing
+                    )
+                ),
+            }
+
+        if (
+            "No platform-security bypass behavior is implemented."
+            not in text
+        ):
+            return {
+                "passed": False,
+                "output": (
+                    "Phase 6 defensive research boundary is missing."
+                ),
+            }
 
     return {
         "passed": True,
-        "output": "Phase 6 contract validation passed.",
+        "output": (
+            f"Contract validation passed for phase {phase_id}: "
+            f"{contract_rel}"
+        ),
     }
 
 
-def contract_validation():
-    result = validate_phase6_contract()
+def contract_validation(phase_id: int = 6):
+    result = validate_contract_for_phase(phase_id)
 
     return {
-        "command": ["phase6-contract-validation"],
+        "command": [
+            "contract-validation",
+            str(phase_id),
+        ],
         "cwd": ROOT,
-        "validator": validate_phase6_contract,
+        "validator": lambda: validate_contract_for_phase(phase_id),
         **result,
     }

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "mode": "guarded_execution",
+  "allow_generation": true,
+  "allow_source_mutation": true,
+  "allow_auto_repair": true,
+  "max_repair_attempts": 3,
+  "allow_git_commit": true,
+  "allow_git_push": true,
+  "allow_pull_request": false,
+  "allow_merge": false,
+  "require_clean_tree_before_run": true,
+  "require_allowed_paths_after_mutation": true,
+  "require_all_gates_pass": true,
+  "default_base": "main"
+}
