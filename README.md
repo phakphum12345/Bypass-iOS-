@@ -152,3 +152,348 @@ Try the [Expand your team with Copilot cloud agent](https://github.com/skills/ex
 * [GitHub Copilot cloud agent](/en/copilot/how-tos/use-copilot-agents/cloud-agent) how-to articles
 * [About custom agents](/en/copilot/concepts/agents/cloud-agent/about-custom-agents)
 * [Application card: GitHub Copilot Agents](/en/copilot/responsible-use/agents)
+
+
+
+
+feat/master-rulebook-final-gate-v1
+โค้ดที่จะแก้
+1. README.md — Master Rulebook
+# Bypass-iOS- — Master Rulebook
+
+## 1. Purpose
+
+This repository implements a defensive device-service research platform.
+
+The system MUST NOT implement, facilitate, or automate:
+
+- Activation Lock bypass
+- Passcode bypass
+- MDM circumvention
+- Credential theft
+- Exploit delivery
+- Unauthorized device access
+- Security-control evasion
+
+These boundaries are mandatory.
+
+---
+
+## 2. Canonical Architecture
+
+```text
+Identity
+↓
+Capability
+↓
+Policy
+↓
+Authorization
+↓
+Entitlement
+↓
+Execution
+↓
+Evidence
+Execution is permitted only when all required security decisions succeed.
+3. Platform Architecture
+USER
+ ↓
+WEB / CLIENT
+ ↓
+API GATEWAY
+ ↓
+DEVICE SERVICE
+ ↓
+DEVICE REGISTRY
+ ↓
+DEVICE INTELLIGENCE
+ ↓
+ELIGIBILITY ENGINE
+ ↓
+AUTHORIZATION
+ ↓
+ENTITLEMENT
+ ↓
+SERVICE WORKFLOW
+ ↓
+AUDIT / EVIDENCE
+4. Decision Rule
+Execution MUST satisfy:
+Authorization == ALLOWED
+AND
+Entitlement == ACTIVE
+Otherwise:
+DENY
+The client MUST NOT manufacture or override server-side decisions.
+5. Evidence
+Every security-sensitive decision MUST produce auditable evidence containing:
+event_id
+actor
+device_id
+service_id
+action
+policy_id
+policy_version
+policy_decision
+authorization_result
+timestamp
+correlation_id
+result
+Evidence MUST be immutable after creation.
+6. Workflow Rule
+Validation workflows are read-only.
+CI MUST NOT:
+push directly to main
+rewrite main
+bypass required validation
+manufacture successful results
+Changes follow:
+Branch
+ ↓
+Validation
+ ↓
+Final Gate
+ ↓
+PR Review
+ ↓
+Merge
+ ↓
+main
+7. Final Gate
+Final Gate is the single release authority.
+Required gates:
+Architecture validation
+Security boundary validation
+Code generation validation
+Flutter external-tool validation
+API / contract validation
+E2E validation
+Release validation
+All required gates MUST pass before merge/release.
+8. Flutter Rule
+Flutter is an external client/tool only.
+Flutter MUST NOT become the security authority.
+Server-side services remain authoritative for:
+Identity
+Policy
+Authorization
+Eligibility
+Entitlement
+Execution
+9. Change Policy
+Before adding implementation:
+Inspect existing code
+↓
+Identify missing capability
+↓
+Modify only missing capability
+↓
+Run validation
+↓
+Final Gate
+Do not create duplicate implementations.
+10. Security Invariant
+The platform is a defensive research and service-eligibility system.
+No implementation may weaken, bypass, or evade security controls.
+
+### 2. `.github/workflows/final-gate.yml`
+
+```yaml
+name: Final Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: final-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  architecture:
+    name: Architecture Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify architecture documents
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            "Bypass.md"
+            "docs/architecture/PHASE_3_CONTRACT.md"
+            "docs/architecture/PHASE_4_CONTRACT.md"
+            "docs/architecture/PHASE_5_CONTRACT.md"
+          )
+
+          for file in "${required[@]}"; do
+            test -f "$file"
+          done
+
+  security:
+    name: Security Boundary Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify security boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f Bypass.md
+
+          grep -q "Activation Lock bypass" Bypass.md
+          grep -q "Passcode bypass" Bypass.md
+          grep -q "MDM circumvention" Bypass.md
+          grep -q "Credential theft" Bypass.md
+          grep -q "Exploit delivery" Bypass.md
+          grep -q "Unauthorized device access" Bypass.md
+          grep -q "Security-control evasion" Bypass.md
+
+  codegen:
+    name: Codegen Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify codegen contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/architecture/PHASE_5_CONTRACT.md
+
+  flutter:
+    name: Flutter External Tool Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Flutter workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -d flutter_app ]; then
+            test -f flutter_app/pubspec.yaml
+          else
+            echo "flutter_app not present"
+          fi
+
+  contracts:
+    name: Contract Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            "docs/API_CONTRACT.md"
+            "docs/DATA_MODEL.md"
+            "docs/DECISION_MODEL.md"
+            "docs/THREAT_MODEL.md"
+            "docs/VERIFICATION_MATRIX.md"
+          )
+
+          for file in "${required[@]}"; do
+            test -f "$file"
+          done
+
+  e2e:
+    name: E2E Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify E2E contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -f docs/architecture/PHASE_7_CONTRACT.md ]; then
+            echo "Phase 7 E2E contract present"
+          else
+            echo "Phase 7 E2E contract missing"
+            exit 1
+          fi
+
+  release:
+    name: Release Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/architecture/PHASE_9_RELEASE_CONTRACT.md
+
+  final:
+    name: FINAL GATE
+    runs-on: ubuntu-latest
+    needs:
+      - architecture
+      - security
+      - codegen
+      - flutter
+      - contracts
+      - e2e
+      - release
+
+    steps:
+      - name: Final Gate PASS
+        run: |
+          echo "================================="
+          echo " FINAL GATE: PASS"
+          echo "================================="
+          echo "Architecture: PASS"
+          echo "Security:     PASS"
+          echo "Codegen:      PASS"
+          echo "Flutter:      PASS"
+          echo "Contracts:    PASS"
+          echo "E2E:          PASS"
+          echo "Release:      PASS"
+          echo "================================="
+3. Bypass.yml จุดที่ต้องแก้
+ต้องเอาส่วนนี้ออกจาก validation workflow:
+git commit
+git push origin HEAD:main
+Final Gate ต้องเป็น read-only:
+permissions:
+  contents: read
+และ flow ต้องเป็น:
+feat/master-rulebook-final-gate-v1
+              ↓
+       Final Gate
+              ↓
+          PR Review
+              ↓
+            main
+ยังไม่ควรเขียนลง main ตอนนี้ เพราะ branch creation ผ่าน Connector ติด 403 และเราต้องรักษากติกาเดิมที่ว่า ตรวจของเดิมก่อน → แก้เฉพาะส่วนที่ขาด → Gate → PR → main ครับ
