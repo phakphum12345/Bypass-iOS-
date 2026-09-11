@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/decision.schema.json",
+  "title": "Authoritative Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision",
+    "authorization",
+    "entitlement"
+  ],
+  "properties": {
+    "decision": {
+      "enum": ["ALLOWED", "DENY"]
+    },
+    "authorization": {
+      "enum": ["ALLOWED", "DENY", "UNKNOWN"]
+    },
+    "entitlement": {
+      "enum": [
+        "ACTIVE",
+        "INACTIVE",
+        "EXPIRED",
+        "REVOKED",
+        "UNKNOWN"
+      ]
+    }
+  }
+}
