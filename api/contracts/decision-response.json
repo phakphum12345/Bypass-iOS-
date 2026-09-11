@@ -1,0 +1,45 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Decision Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "correlation_id",
+    "decision",
+    "authorization",
+    "entitlement"
+  ],
+  "properties": {
+    "correlation_id": {
+      "type": "string"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "ALLOWED",
+        "DENY"
+      ]
+    },
+    "authorization": {
+      "type": "string",
+      "enum": [
+        "ALLOWED",
+        "DENY",
+        "UNKNOWN"
+      ]
+    },
+    "entitlement": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "INACTIVE",
+        "EXPIRED",
+        "REVOKED",
+        "UNKNOWN"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    }
+  }
+}

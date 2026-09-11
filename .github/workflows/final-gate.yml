@@ -1,0 +1,122 @@
+﻿name: Final Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  final-gate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required architecture files
+        shell: bash
+        run: |
+          set -e
+
+          required_files=(
+            "Bypass.md"
+            "docs/architecture/system-overview.md"
+            "docs/architecture/security-boundary.md"
+            "docs/architecture/decision-pipeline.md"
+            "docs/architecture/evidence-model.md"
+            "docs/device/identity.md"
+            "docs/device/capabilities.md"
+            "docs/ui/design-system.md"
+            "api/README.md"
+            "api/contracts/decision-request.json"
+            "api/contracts/decision-response.json"
+            "api/contracts/evidence.json"
+            "api/schemas/decision.schema.json"
+            "flutter_app/pubspec.yaml"
+            "flutter_app/lib/main.dart"
+          )
+
+          for file in "${required_files[@]}"; do
+            test -f "$file" || {
+              echo "Missing required file: $file"
+              exit 1
+            }
+          done
+
+      - name: Validate security boundary
+        shell: bash
+        run: |
+          set -e
+
+          grep -q "Identity" Bypass.md
+          grep -q "Capability" Bypass.md
+          grep -q "Policy" Bypass.md
+          grep -q "Authorization" Bypass.md
+          grep -q "Entitlement" Bypass.md
+          grep -q "Execution" Bypass.md
+          grep -q "Evidence" Bypass.md
+
+          grep -qi "Activation Lock bypass" Bypass.md
+          grep -qi "Passcode bypass" Bypass.md
+          grep -qi "MDM circumvention" Bypass.md
+          grep -qi "Credential theft" Bypass.md
+          grep -qi "Exploit delivery" Bypass.md
+          grep -qi "Unauthorized device access" Bypass.md
+          grep -qi "Security-control evasion" Bypass.md
+
+      - name: Validate API JSON
+        shell: bash
+        run: |
+          set -e
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          files = [
+              Path("api/contracts/decision-request.json"),
+              Path("api/contracts/decision-response.json"),
+              Path("api/contracts/evidence.json"),
+              Path("api/schemas/decision.schema.json"),
+          ]
+
+          for path in files:
+              with path.open(encoding="utf-8") as f:
+                  json.load(f)
+              print(f"VALID JSON: {path}")
+          PY
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.3"
+          channel: stable
+          cache: true
+
+      - name: Flutter dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: flutter_app
+        run: flutter analyze
+
+      - name: Flutter tests
+        working-directory: flutter_app
+        run: flutter test
+
+      - name: Flutter build
+        working-directory: flutter_app
+        run: flutter build bundle --target lib/main.dart
+
+      - name: Final Gate PASS
+        shell: bash
+        run: |
+          echo "FINAL GATE: PASS"
+          echo "Architecture: PASS"
+          echo "Security Boundary: PASS"
+          echo "API Contracts: PASS"
+          echo "Flutter Analyze: PASS"
+          echo "Flutter Tests: PASS"
+          echo "Flutter Build: PASS"
