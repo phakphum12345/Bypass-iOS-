@@ -1,6 +1,9 @@
 ﻿name: Final Gate
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -18,7 +21,7 @@ jobs:
       - name: Validate required architecture files
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           required_files=(
             "Bypass.md"
@@ -48,28 +51,47 @@ jobs:
       - name: Validate security boundary
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
-          grep -q "Identity" Bypass.md
-          grep -q "Capability" Bypass.md
-          grep -q "Policy" Bypass.md
-          grep -q "Authorization" Bypass.md
-          grep -q "Entitlement" Bypass.md
-          grep -q "Execution" Bypass.md
-          grep -q "Evidence" Bypass.md
+          for required in \
+            "Identity" \
+            "Capability" \
+            "Policy" \
+            "Authorization" \
+            "Entitlement" \
+            "Execution" \
+            "Evidence"
+          do
+            grep -q "$required" Bypass.md
+          done
 
-          grep -qi "Activation Lock bypass" Bypass.md
-          grep -qi "Passcode bypass" Bypass.md
-          grep -qi "MDM circumvention" Bypass.md
-          grep -qi "Credential theft" Bypass.md
-          grep -qi "Exploit delivery" Bypass.md
-          grep -qi "Unauthorized device access" Bypass.md
-          grep -qi "Security-control evasion" Bypass.md
+          for prohibited in \
+            "Activation Lock bypass" \
+            "Passcode bypass" \
+            "MDM circumvention" \
+            "Credential theft" \
+            "Exploit delivery" \
+            "Unauthorized device access" \
+            "Security-control evasion"
+          do
+            grep -qi "$prohibited" Bypass.md
+          done
 
-      - name: Validate API JSON
+      - name: Validate Flutter external-tool boundary
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
+
+          grep -qi "external tool" Bypass.md
+          grep -qi "must not manufacture authorization" Bypass.md
+          grep -qi "must not manufacture entitlement" Bypass.md
+          grep -qi "server authoritative" Bypass.md
+
+      - name: Validate API contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
           python - <<'PY'
           import json
           from pathlib import Path
@@ -85,7 +107,46 @@ jobs:
               with path.open(encoding="utf-8") as f:
                   json.load(f)
               print(f"VALID JSON: {path}")
+
+          request = json.loads(
+              Path("api/contracts/decision-request.json").read_text(encoding="utf-8")
+          )
+          response = json.loads(
+              Path("api/contracts/decision-response.json").read_text(encoding="utf-8")
+          )
+          evidence = json.loads(
+              Path("api/contracts/evidence.json").read_text(encoding="utf-8")
+          )
+          schema = json.loads(
+              Path("api/schemas/decision.schema.json").read_text(encoding="utf-8")
+          )
+
+          assert request["additionalProperties"] is False
+          assert response["additionalProperties"] is False
+          assert evidence["additionalProperties"] is False
+
+          assert response["properties"]["decision"]["enum"] == ["ALLOWED", "DENY"]
+          assert response["properties"]["authorization"]["enum"] == [
+              "ALLOWED", "DENY", "UNKNOWN"
+          ]
+          assert response["properties"]["entitlement"]["enum"] == [
+              "ACTIVE", "INACTIVE", "EXPIRED", "REVOKED", "UNKNOWN"
+          ]
+
+          assert schema["properties"]["decision"]["enum"] == ["ALLOWED", "DENY"]
+          assert schema["properties"]["authorization"]["enum"] == [
+              "ALLOWED", "DENY", "UNKNOWN"
+          ]
+          assert "ACTIVE" in schema["properties"]["entitlement"]["enum"]
+
+          print("API CONTRACT SEMANTICS: PASS")
           PY
+
+      - name: Validate repository whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -113,10 +174,13 @@ jobs:
       - name: Final Gate PASS
         shell: bash
         run: |
+          set -euo pipefail
           echo "FINAL GATE: PASS"
           echo "Architecture: PASS"
           echo "Security Boundary: PASS"
+          echo "Flutter External Tool Boundary: PASS"
           echo "API Contracts: PASS"
+          echo "Repository Whitespace: PASS"
           echo "Flutter Analyze: PASS"
           echo "Flutter Tests: PASS"
           echo "Flutter Build: PASS"
