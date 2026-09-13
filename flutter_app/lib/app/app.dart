@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
-import 'app_theme.dart';
-import 'navigation.dart';
 
-class DefensiveReferenceApp extends StatelessWidget {
-  const DefensiveReferenceApp({super.key});
+class PolicyPage extends StatelessWidget {
+  const PolicyPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Defensive Device Service',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
-      initialRoute: AppNavigation.homeRoute,
-      routes: AppNavigation.routes(),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Policy'),
+      ),
+      body: const ListTile(
+        title: Text('Policy'),
+        subtitle: Text(
+          'Authoritative policy state is displayed here.',
+        ),
+      ),
     );
   }
 }
