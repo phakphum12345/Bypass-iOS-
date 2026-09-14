@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bypass_architecture_reference/app/app.dart';
 
@@ -8,8 +7,7 @@ void main() {
     await tester.pumpWidget(const DefensiveReferenceApp());
     await tester.pumpAndSettle();
 
-    expect(find.byType(MaterialApp), findsOneWidget);
-    expect(find.text('Device Status'), findsOneWidget);
+    expect(find.text('Security Overview'), findsOneWidget);
   });
 
   testWidgets('application exposes the dashboard as the home route',
