@@ -1,0 +1,45 @@
+name: Windows Device Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/windows/**'
+      - 'docs/device/windows-diagnostics.md'
+      - '.github/workflows/windows-device-diagnostics.yml'
+  pull_request:
+    paths:
+      - 'tools/windows/**'
+      - 'docs/device/windows-diagnostics.md'
+      - '.github/workflows/windows-device-diagnostics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run read-only diagnostic self-tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          .\tools\windows\Inspect-AppleDeviceConnection.ps1 -SelfTest
+      - name: Validate safety invariants
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Get-Content .\tools\windows\Inspect-AppleDeviceConnection.ps1 -Raw
+          if ($source -match '(?i)idevicepair|ideviceactivation|ideviceprovision|Remove-Item|Set-Service|Start-Service|Stop-Service') {
+            throw 'Unexpected state-changing or pairing command detected in diagnostic source.'
+          }
+          if ($source -notmatch "ActivationLockState\s*=\s*'NOT_INSPECTED'" -or
+              $source -notmatch "PasscodeState\s*=\s*'NOT_INSPECTED'" -or
+              $source -notmatch "MdmState\s*=\s*'NOT_INSPECTED'") {
+            throw 'Required security-state unknown markers are missing.'
+          }
+          Write-Output 'Safety-boundary source checks: PASS'
