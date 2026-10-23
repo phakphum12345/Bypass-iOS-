@@ -1,0 +1,66 @@
+name: iOS Simulator Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios-simulator:
+    runs-on: macos-14
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.3"
+          channel: stable
+          cache: true
+
+      - name: Generate iOS platform scaffolding
+        working-directory: flutter_app
+        run: |
+          set -euo pipefail
+          flutter create --platforms=ios .
+          # Remove only Flutter's generated starter test; keep repository tests.
+          rm -f test/widget_test.dart
+
+      - name: Flutter dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: flutter_app
+        run: flutter analyze
+
+      - name: Flutter tests
+        working-directory: flutter_app
+        run: flutter test
+
+      - name: Build iOS Simulator app (unsigned)
+        working-directory: flutter_app
+        run: |
+          set -euo pipefail
+          flutter build ios --simulator --no-codesign
+          test -d build/ios/iphonesimulator/Runner.app
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/ios/iphonesimulator/Runner.app \
+            "$GITHUB_WORKSPACE/ios-simulator-app.zip"
+          test -s "$GITHUB_WORKSPACE/ios-simulator-app.zip"
+
+      - name: Upload iOS Simulator artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: ios-simulator-app.zip
+          if-no-files-found: error
+          retention-days: 14
