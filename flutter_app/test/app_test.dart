@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const DefensiveReferenceApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Security Overview'), findsOneWidget);
+    expect(find.text('Device Security Overview'), findsOneWidget);
   });
 
   testWidgets('application exposes the dashboard as the home route',
