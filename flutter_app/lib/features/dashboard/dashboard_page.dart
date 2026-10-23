@@ -5,6 +5,7 @@ import '../../core/services/decision_service.dart';
 import 'widgets/decision_card.dart';
 import 'widgets/device_card.dart';
 import 'widgets/security_gate_card.dart';
+import '../recovery/recovery_guide_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -162,6 +163,18 @@ class _DashboardPageState extends State<DashboardPage> {
                   label: const Text('View Evidence'),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const RecoveryGuidePage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.health_and_safety_outlined),
+              label: const Text('Recovery Assistant'),
             ),
           ],
         ),
