@@ -92,7 +92,7 @@ class _RecoveryGuidePageState extends State<RecoveryGuidePage> {
       ..writeln(recoveryCase.title)
       ..writeln(recoveryCase.summary)
       ..writeln()
-      ..write(recoveryCase.steps.map((step) => '- $step').join('\\n'))
+      ..write(recoveryCase.steps.map((step) => '- $step').join('\n'))
       ..writeln()
       ..writeln('Official support: ${recoveryCase.url}');
     await Clipboard.setData(ClipboardData(text: checklist.toString()));
