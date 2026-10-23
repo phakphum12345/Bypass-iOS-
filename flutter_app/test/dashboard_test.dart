@@ -15,19 +15,21 @@ void main() {
 
     expect(find.text('Device Security Overview'), findsOneWidget);
     expect(find.text('Device Status'), findsOneWidget);
+    expect(find.text('NOT CONNECTED'), findsOneWidget);
+    expect(find.text('Prototype dashboard. No live device or server checks are connected.'), findsOneWidget);
     expect(find.text('Identity'), findsOneWidget);
     expect(find.text('Capability'), findsOneWidget);
     expect(find.text('Policy'), findsOneWidget);
     expect(find.text('Authorization'), findsOneWidget);
     expect(find.text('Entitlement'), findsOneWidget);
-    expect(find.text('Authoritative Decision'), findsOneWidget);
+    expect(find.text('Decision Preview (Demo)'), findsOneWidget);
   });
 
   testWidgets('dashboard starts with unknown security decision', (tester) async {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('UNKNOWN'), findsNWidgets(3));
+    expect(find.text('UNKNOWN'), findsNWidgets(6));
     expect(
       find.text('No authoritative decision available.'),
       findsOneWidget,
@@ -38,7 +40,7 @@ void main() {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    final evaluateButton = find.text('Evaluate Decision');
+    final evaluateButton = find.text('Load Demo Decision');
     expect(evaluateButton, findsOneWidget);
 
     await tester.ensureVisible(evaluateButton);
@@ -47,7 +49,7 @@ void main() {
 
     expect(find.text('DENY'), findsOneWidget);
     expect(
-      find.text('Awaiting authoritative server decision.'),
+      find.text('DEMO ONLY: no live server request was made.'),
       findsOneWidget,
     );
   });
