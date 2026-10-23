@@ -14,7 +14,7 @@ class DecisionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final decision = response?.decision.decision.name.toUpperCase() ?? 'UNKNOWN';
     final reason =
-        response?.decision.reason ?? 'No authoritative decision available.';
+        response?.decision.reason ?? 'No live server decision available.';
 
     return Card(
       child: Padding(
@@ -23,7 +23,7 @@ class DecisionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Authoritative Decision',
+              'Decision Preview (Demo)',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -35,7 +35,7 @@ class DecisionCard extends StatelessWidget {
             Text(reason),
             const SizedBox(height: 16),
             const Text(
-              'The client cannot override this decision.',
+              'Demo only: no live authorization or entitlement check was performed.',
             ),
           ],
         ),
