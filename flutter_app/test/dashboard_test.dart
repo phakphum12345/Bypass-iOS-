@@ -31,12 +31,12 @@ void main() {
 
     expect(find.text('UNKNOWN'), findsNWidgets(6));
     expect(
-      find.text('No authoritative decision available.'),
+      find.text('No live server decision available.'),
       findsOneWidget,
     );
   });
 
-  testWidgets('evaluate decision displays authoritative deny', (tester) async {
+  testWidgets('loading demo decision displays an explicitly labeled demo deny', (tester) async {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
