@@ -172,7 +172,13 @@ jobs:
 
       - name: Generate Web and Linux platform scaffolding
         working-directory: flutter_app
-        run: flutter create --platforms=web,linux .
+        run: |
+          set -euo pipefail
+          flutter create --platforms=web,linux .
+          # `flutter create` adds its starter test when this package has no
+          # test/widget_test.dart. Remove only that generated sample so it
+          # cannot shadow the repository's real app/security tests.
+          rm -f test/widget_test.dart
 
       - name: Flutter dependencies
         working-directory: flutter_app
