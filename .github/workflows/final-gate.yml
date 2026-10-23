@@ -1,4 +1,4 @@
-﻿name: Final Gate
+name: Final Gate
 
 on:
   push:
@@ -13,6 +13,7 @@ permissions:
 jobs:
   final-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
@@ -32,6 +33,7 @@ jobs:
             "docs/device/identity.md"
             "docs/device/capabilities.md"
             "docs/ui/design-system.md"
+            "docs/release/install.md"
             "api/README.md"
             "api/contracts/decision-request.json"
             "api/contracts/decision-response.json"
@@ -105,21 +107,21 @@ jobs:
           ]
 
           for path in files:
-              with path.open(encoding="utf-8") as f:
+              with path.open(encoding="utf-8-sig") as f:
                   json.load(f)
               print(f"VALID JSON: {path}")
 
           request = json.loads(
-              Path("api/contracts/decision-request.json").read_text(encoding="utf-8")
+              Path("api/contracts/decision-request.json").read_text(encoding="utf-8-sig")
           )
           response = json.loads(
-              Path("api/contracts/decision-response.json").read_text(encoding="utf-8")
+              Path("api/contracts/decision-response.json").read_text(encoding="utf-8-sig")
           )
           evidence = json.loads(
-              Path("api/contracts/evidence.json").read_text(encoding="utf-8")
+              Path("api/contracts/evidence.json").read_text(encoding="utf-8-sig")
           )
           schema = json.loads(
-              Path("api/schemas/decision.schema.json").read_text(encoding="utf-8")
+              Path("api/schemas/decision.schema.json").read_text(encoding="utf-8-sig")
           )
 
           assert request["additionalProperties"] is False
@@ -149,12 +151,34 @@ jobs:
           set -euo pipefail
           git diff --check
 
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential \
+            clang \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libgtk-3-dev \
+            liblzma-dev
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.24.3"
           channel: stable
           cache: true
+
+      - name: Generate Web and Linux platform scaffolding
+        working-directory: flutter_app
+        run: |
+          set -euo pipefail
+          flutter create --platforms=web,linux .
+          # `flutter create` adds its starter test when this package has no
+          # test/widget_test.dart. Remove only that generated sample so it
+          # cannot shadow the repository's real app/security tests.
+          rm -f test/widget_test.dart
 
       - name: Flutter dependencies
         working-directory: flutter_app
@@ -168,9 +192,37 @@ jobs:
         working-directory: flutter_app
         run: flutter test
 
-      - name: Flutter build
+      - name: Build Web release
         working-directory: flutter_app
-        run: flutter build bundle --target lib/main.dart
+        run: flutter build web --release
+
+      - name: Build Linux x64 release
+        working-directory: flutter_app
+        run: flutter build linux --release
+
+      - name: Package Linux x64 release
+        working-directory: flutter_app
+        run: |
+          set -euo pipefail
+          tar -czf "$GITHUB_WORKSPACE/research-os-linux-x64.tar.gz" \
+            -C build/linux/x64/release bundle
+          test -s "$GITHUB_WORKSPACE/research-os-linux-x64.tar.gz"
+
+      - name: Upload Web release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: flutter_app/build/web/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Linux x64 release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: research-os-linux-x64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Final Gate PASS
         shell: bash
@@ -184,4 +236,6 @@ jobs:
           echo "Repository Whitespace: PASS"
           echo "Flutter Analyze: PASS"
           echo "Flutter Tests: PASS"
-          echo "Flutter Build: PASS"
+          echo "Web Release Build: PASS"
+          echo "Linux x64 Release Build: PASS"
+          echo "Release Artifacts: UPLOADED"

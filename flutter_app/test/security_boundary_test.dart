@@ -1,9 +1,9 @@
 ﻿import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/core/models/authorization.dart';
-import '../lib/core/models/entitlement.dart';
-import '../lib/core/models/decision.dart';
-import '../lib/core/security/security_boundary.dart';
+import 'package:bypass_architecture_reference/core/models/authorization.dart';
+import 'package:bypass_architecture_reference/core/models/entitlement.dart';
+import 'package:bypass_architecture_reference/core/models/decision.dart';
+import 'package:bypass_architecture_reference/core/security/security_boundary.dart';
 
 void main() {
   const boundary = SecurityBoundary();

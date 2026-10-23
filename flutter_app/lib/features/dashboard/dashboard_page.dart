@@ -19,14 +19,13 @@ class _DashboardPageState extends State<DashboardPage> {
   DecisionResponse? _response;
 
   void _evaluateDecision() {
-    // Demonstration only: this represents a response already evaluated
-    // by the authoritative server. The client does not manufacture access.
+    // Demo fixture only. This does not call a server or inspect a device.
     final response = _decisionService.parseAuthoritativeResponse({
       'correlation_id': 'demo-correlation',
       'decision': 'DENY',
       'authorization': 'DENY',
       'entitlement': 'UNKNOWN',
-      'reason': 'Awaiting authoritative server decision.',
+      'reason': 'DEMO ONLY: no live server request was made.',
     });
 
     setState(() {
@@ -41,8 +40,8 @@ class _DashboardPageState extends State<DashboardPage> {
         title: const Text('Evidence'),
         content: Text(
           _response == null
-              ? 'No authoritative decision has been evaluated.'
-              : 'Correlation ID: ${_response!.correlationId}\n'
+              ? 'No demo decision has been loaded.'
+              : 'Demo correlation ID: ${_response!.correlationId}\n'
                   'Decision: ${_response!.decision.decision.name}\n'
                   'Reason: ${_response!.decision.reason}',
         ),
@@ -82,7 +81,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Authoritative security state supplied by the server.',
+              'Prototype dashboard. No live device or server checks are connected.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
@@ -96,7 +95,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Expanded(
                   child: SecurityGateCard(
                     title: 'Identity',
-                    status: 'VALIDATED',
+                    status: 'UNKNOWN',
                     icon: Icons.badge_outlined,
                   ),
                 ),
@@ -104,7 +103,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Expanded(
                   child: SecurityGateCard(
                     title: 'Capability',
-                    status: 'AVAILABLE',
+                    status: 'UNKNOWN',
                     icon: Icons.extension_outlined,
                   ),
                 ),
@@ -112,7 +111,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Expanded(
                   child: SecurityGateCard(
                     title: 'Policy',
-                    status: 'EVALUATED',
+                    status: 'UNKNOWN',
                     icon: Icons.policy_outlined,
                   ),
                 ),
@@ -154,7 +153,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 FilledButton.icon(
                   onPressed: _evaluateDecision,
                   icon: const Icon(Icons.fact_check_outlined),
-                  label: const Text('Evaluate Decision'),
+                  label: const Text('Load Demo Decision'),
                 ),
                 const SizedBox(width: 12),
                 OutlinedButton.icon(
