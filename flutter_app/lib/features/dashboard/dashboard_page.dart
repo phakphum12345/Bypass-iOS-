@@ -19,8 +19,7 @@ class _DashboardPageState extends State<DashboardPage> {
   DecisionResponse? _response;
 
   void _evaluateDecision() {
-    // Demonstration only: this represents a response already evaluated
-    // by the authoritative server. The client does not manufacture access.
+    // Demo fixture only. This does not call a server or inspect a device.
     final response = _decisionService.parseAuthoritativeResponse({
       'correlation_id': 'demo-correlation',
       'decision': 'DENY',
@@ -41,8 +40,8 @@ class _DashboardPageState extends State<DashboardPage> {
         title: const Text('Evidence'),
         content: Text(
           _response == null
-              ? 'No authoritative decision has been evaluated.'
-              : 'Correlation ID: ${_response!.correlationId}\n'
+              ? 'No demo decision has been loaded.'
+               : 'Demo correlation ID: ${_response!.correlationId}\n'
                   'Decision: ${_response!.decision.decision.name}\n'
                   'Reason: ${_response!.decision.reason}',
         ),
