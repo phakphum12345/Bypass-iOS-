@@ -103,7 +103,12 @@ class _ResearchOsConnectionPageState extends State<ResearchOsConnectionPage> {
   String _formatLastChecked() {
     final value = _lastChecked;
     if (value == null) return 'Never';
-    return value.toLocal().toIso8601String().replaceFirst('T', ' ').split('.').first;
+    return value
+        .toLocal()
+        .toIso8601String()
+        .replaceFirst('T', ' ')
+        .split('.')
+        .first;
   }
 
   @override
@@ -161,9 +166,9 @@ class _ResearchOsConnectionPageState extends State<ResearchOsConnectionPage> {
                     autocorrect: false,
                     enableSuggestions: false,
                     decoration: const InputDecoration(
-                      labelText: 'Read-only API credential (optional)',
+                      labelText: 'Scoped read-only API credential',
                       helperText:
-                          'Kept in memory for this screen only; never saved or placed in the URL.',
+                          'Required for remote connections. Kept in screen memory only; never saved or placed in the URL.',
                       border: OutlineInputBorder(),
                     ),
                   ),
