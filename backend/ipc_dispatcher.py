@@ -12,7 +12,8 @@ from typing import Any, Callable, Mapping
 
 from backend.agent_lifecycle import AgentLifecycle
 from backend.host_diagnostics import collect_host_diagnostics
-from backend.audit_evidence import AuditLedger
+from backend.audit_evidence import AuditLedger, AuditValidationError
+from backend.audit_store import AuditStoreError, SQLiteAuditStore
 from backend.ipc_audit import append_ipc_audit_event
 from backend.ipc_peer_auth import PeerAuthenticator, PeerEvidence, resolve_peer
 from backend.local_ipc_contract import IPCContractError, validate_request_bytes
@@ -182,3 +183,63 @@ def dispatch_local_ipc_request_with_audit(
         occurred_at=occurred_at,
     )
     return response, updated_ledger
+
+
+def dispatch_local_ipc_request_with_durable_audit(
+    raw: bytes,
+    *,
+    authenticator: PeerAuthenticator | None,
+    connection_context: object,
+    store: SQLiteAuditStore,
+    event_id: str,
+    occurred_at: datetime,
+    lifecycle: AgentLifecycle | None = None,
+    diagnostics_provider: Callable[[], Mapping[str, Any]] = collect_host_diagnostics,
+    audience: str = SERVICE_AUDIENCE,
+    now: datetime | None = None,
+) -> tuple[dict[str, Any], AuditLedger | None]:
+    """Load durable evidence before dispatch and persist every returned outcome.
+
+    The caller initializes the SQLite schema. Load failure prevents dispatch.
+    Append failure suppresses any read result and never claims durable audit.
+    The returned ledger is the verified persisted snapshot, or None on load
+    failure. This wrapper does not initialize or manage the database lifecycle.
+    """
+    try:
+        ledger = store.load()
+    except AuditStoreError:
+        response = _response(
+            None,
+            status="AUDIT_UNAVAILABLE",
+            peer_status="NOT_CHECKED",
+            error="audit_store_unavailable",
+        )
+        response["audit_recorded"] = False
+        return response, None
+
+    try:
+        response, updated_ledger = dispatch_local_ipc_request_with_audit(
+            raw,
+            authenticator=authenticator,
+            connection_context=connection_context,
+            ledger=ledger,
+            event_id=event_id,
+            occurred_at=occurred_at,
+            lifecycle=lifecycle,
+            diagnostics_provider=diagnostics_provider,
+            audience=audience,
+            now=now,
+        )
+        persisted_ledger = store.append(updated_ledger)
+    except (AuditStoreError, AuditValidationError, ValueError):
+        response = _response(
+            None,
+            status="AUDIT_PERSISTENCE_FAILED",
+            peer_status="NOT_CHECKED",
+            error="audit_persistence_failed",
+        )
+        response["audit_recorded"] = False
+        return response, ledger
+
+    response["audit_recorded"] = True
+    return response, persisted_ledger
