@@ -22,11 +22,12 @@ Build a defensive iOS/iPadOS Device Diagnostics, Ownership, Authorized Recovery,
 - Phase 2: merged to main via PR #12 (merge commit 45b53ec7d3d6f2da4578c9599f234f6b2b86afa4).
 - Phase 3: merged to main via PR #13 (merge commit ae5a79b2ee26a11d16e4d2033ff72a11b6811afc). It adds a fail-closed identity-provider contract only; no production authentication or ownership provider is enabled.
 - Phase 4: merged to main via PR #14 (merge commit b604de97c8a7e166c79a4f6a09b29c19f95dda9d). It adds an isolated consent/policy/entitlement evidence evaluator; no trusted providers or live authorization route are enabled.
-- Phase 5: in progress on a separate PR. It adds a pure informational recovery planner with fixed official support resources; no device operations or security-control removal are available.
+- Phase 5: merged to main via PR #15 (merge commit bc97a1402049638f43383a60ec6c8ccaf64c75c8). It adds a pure informational recovery planner; no device operations or security-control removal are available.
+- Phase 6: in progress on a separate PR. It adds immutable in-memory audit evidence primitives, hash-chain verification, privacy-redacted export, and non-destructive retention evaluation. It is not a durable audit service.
 
 ## Dependency order
 
-Phase 3 must not grant authority based on device connection, an opaque reference, repository ownership, or client-supplied claims. The default identity provider is unavailable, so identity remains UNKNOWN. Phase 4 must not return ALLOW in the live API until identity, ownership, consent, policy, and entitlement providers are independently verified. Phase 5 is limited to documented, authorized platform recovery and management paths; Activation Lock and MDM are security stops, not bypass targets.
+Phase 3 must not grant authority based on device connection, an opaque reference, repository ownership, or client-supplied claims. The default identity provider is unavailable, so identity remains UNKNOWN. Phase 4 must not return ALLOW in the live API until identity, ownership, consent, policy, and entitlement providers are independently verified. Phase 5 is limited to documented, authorized platform recovery and management paths; Activation Lock and MDM are security stops, not bypass targets. Phase 6 audit records are evidence metadata only and must never be treated as an authorization provider. A hash chain without independently protected storage is tamper-evident, not tamper-proof.
 
 ## Release gates
 
