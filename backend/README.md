@@ -1,4 +1,4 @@
-# Decision API, Device Diagnostics, Identity, Authorization, and Recovery Foundation (Phases 1–5)
+# Decision API, Device Diagnostics, Identity, Authorization, Recovery, and Audit Foundation (Phases 1–6)
 
 This is a development-only, loopback-bound API scaffold. The live decision API is deliberately **deny-only**: no production identity, ownership, consent, capability, policy, authorization, entitlement, or execution provider is enabled. A valid decision request returns decision=DENY, authorization=DENY, and entitlement=UNKNOWN. The server does not perform or trigger device operations.
 
@@ -7,6 +7,8 @@ Phase 3 adds backend.identity, a server-side identity-provider interface and fai
 Phase 4 adds backend.authorization, a pure evaluator requiring current, scope-matched identity, ownership, consent, policy, and entitlement evidence. Missing or untrusted evidence remains UNKNOWN; explicit denials, revocation, expiry, and scope mismatches deny the request. This evaluator is not wired into an HTTP route, has no configured providers, and never executes an operation. Its ALLOW result is only an eligibility result for a separate future review/confirmation workflow. The live decision API remains deny-only.
 
 Phase 5 adds backend.recovery_workflow, a pure informational planner for official Apple and organization-authorized recovery guidance. It does not connect to devices, inspect device state, execute commands, or grant authorization. Restore guidance warns about local data loss and unverified backup availability. Activation Lock and MDM are explicit security stops; no bypass/removal workflow exists.
+
+Phase 6 adds backend.audit_evidence, an immutable in-memory ledger contract with SHA-256 hash chaining, verification, redacted JSON export, and non-destructive retention candidate reporting. It is not connected to the HTTP API and has no database, durable append-only store, authenticated access control, tenant isolation, encryption-at-rest, or independently protected chain-head anchor. The hash chain is tamper-evident, not tamper-proof. Audit evidence never grants authorization or triggers an operation.
 
 ## Run
 
@@ -24,7 +26,8 @@ The server binds to loopback and selects an available port by default. Copy the 
 - Phase 3 identity evidence is resolved only by a trusted server-side provider; client-supplied role, ownership, or organization claims are not accepted by the resolver.
 - Phase 4 evidence evaluation is an isolated Python contract; it is not exposed over HTTP and accepts no client-submitted evidence fields.
 - Phase 5 recovery planning is an isolated Python contract; it is not exposed over HTTP and cannot execute device operations.
+- Phase 6 audit evidence is an isolated in-memory contract; it is not exposed over HTTP and cannot grant authorization.
 - The default identity provider is unavailable; identity remains UNKNOWN.
 - GET /v1/execute and other execution routes do not exist.
 
-This scaffold is not production-ready and must not be exposed to the public internet. A trusted read-only device adapter, production identity and ownership providers, consent/policy/entitlement sources, authentication integration, rate limiting, audit persistence, TLS, deployment target, and threat-model review are separate required work. Never send a device serial number, UDID, passcode, Apple Account credential, or other secret as device_id; use a non-sensitive opaque reference.
+This scaffold is not production-ready and must not be exposed to the public internet. A trusted read-only device adapter, production identity and ownership providers, consent/policy/entitlement sources, authentication integration, rate limiting, durable append-only audit persistence, TLS, deployment target, and threat-model review are separate required work. Never send a device serial number, UDID, passcode, Apple Account credential, or other secret as device_id; use a non-sensitive opaque reference.
