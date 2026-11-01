@@ -54,7 +54,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('NOT CONNECTED'), findsOneWidget);
-    expect(find.text('Never'), findsOneWidget);
+    expect(find.text('Last checked: Never'), findsOneWidget);
     expect(tester.widget<TextField>(find.byType(TextField).at(0)).controller!.text, isEmpty);
     expect(tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text, isEmpty);
     httpClient.close();
