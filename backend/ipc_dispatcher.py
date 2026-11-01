@@ -12,7 +12,9 @@ from typing import Any, Callable, Mapping
 
 from backend.agent_lifecycle import AgentLifecycle
 from backend.host_diagnostics import collect_host_diagnostics
-from backend.ipc_peer_auth import PeerAuthenticator, resolve_peer
+from backend.audit_evidence import AuditLedger
+from backend.ipc_audit import append_ipc_audit_event
+from backend.ipc_peer_auth import PeerAuthenticator, PeerEvidence, resolve_peer
 from backend.local_ipc_contract import IPCContractError, validate_request_bytes
 
 SERVICE_AUDIENCE = "host-agent-local-ipc"
@@ -110,3 +112,73 @@ def dispatch_local_ipc_request(
         peer_status=peer.status,
         result=report,
     )
+
+
+
+class _CapturingAuthenticator:
+    """Capture the resolver's validated peer result without re-verifying a peer."""
+
+    def __init__(self, authenticator: PeerAuthenticator | None) -> None:
+        self._authenticator = authenticator
+        self.evidence: PeerEvidence | None = None
+
+    def verify_peer(
+        self, connection_context: object, *, audience: str, now: datetime
+    ) -> PeerEvidence:
+        self.evidence = resolve_peer(
+            self._authenticator,
+            connection_context,
+            audience=audience,
+            now=now,
+        )
+        return self.evidence
+
+
+def dispatch_local_ipc_request_with_audit(
+    raw: bytes,
+    *,
+    authenticator: PeerAuthenticator | None,
+    connection_context: object,
+    ledger: AuditLedger,
+    event_id: str,
+    occurred_at: datetime,
+    lifecycle: AgentLifecycle | None = None,
+    diagnostics_provider: Callable[[], Mapping[str, Any]] = collect_host_diagnostics,
+    audience: str = SERVICE_AUDIENCE,
+    now: datetime | None = None,
+) -> tuple[dict[str, Any], AuditLedger]:
+    """Dispatch once and return the corresponding metadata-only audit ledger.
+
+    The wrapper captures the validated server-side peer evidence through a
+    proxy, so the underlying OS/provider verifier is called at most once.
+    Invalid envelopes are still audited with an unknown actor and no request
+    correlation data. The caller owns the returned immutable ledger.
+    """
+    capturing = _CapturingAuthenticator(authenticator)
+    response = dispatch_local_ipc_request(
+        raw,
+        authenticator=capturing,
+        connection_context=connection_context,
+        lifecycle=lifecycle,
+        diagnostics_provider=diagnostics_provider,
+        audience=audience,
+        now=now,
+    )
+    try:
+        request = validate_request_bytes(raw)
+        request_id = request["request_id"]
+        method = request["method"]
+    except IPCContractError:
+        request_id = None
+        method = None
+
+    updated_ledger = append_ipc_audit_event(
+        ledger,
+        event_id=event_id,
+        peer=capturing.evidence,
+        request_id=request_id,
+        method=method,
+        response_status=response["status"],
+        occurred_at=occurred_at,
+    )
+    return response, updated_ledger
