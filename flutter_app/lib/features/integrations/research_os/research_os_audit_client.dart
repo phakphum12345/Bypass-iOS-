@@ -30,8 +30,16 @@ class ResearchOsAuditClient {
   }) async {
     final base = _validateBaseUrl(baseUrl);
     final token = bearerToken?.trim();
-    if (token != null &&
-        (token.isEmpty || token.contains(RegExp(r'\s')))) {
+    final isLoopback =
+        const {'localhost', '127.0.0.1', '::1'}
+            .contains(base.host.toLowerCase());
+
+    if (!isLoopback && (token == null || token.isEmpty)) {
+      throw const ResearchOsApiException(
+        'A scoped read-only credential is required for remote Research OS connections.',
+      );
+    }
+    if (token != null && token.contains(RegExp(r'\s'))) {
       throw const ResearchOsApiException(
         'Credential format is invalid. Credentials must not contain whitespace.',
       );
@@ -48,9 +56,7 @@ class ResearchOsAuditClient {
 
     late final http.Response response;
     try {
-      response = await _client
-          .get(uri, headers: headers)
-          .timeout(timeout);
+      response = await _client.get(uri, headers: headers).timeout(timeout);
     } on Exception {
       throw const ResearchOsApiException(
         'Research OS could not be reached or the request timed out.',
