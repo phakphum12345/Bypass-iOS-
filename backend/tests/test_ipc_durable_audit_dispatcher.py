@@ -15,20 +15,16 @@ REQUEST_ID = "req_1234567890abcdef"
 
 class VerifiedAuthenticator:
     def __init__(self, status="VERIFIED"):
-        self.status = status
-        self.calls = 0
+        self.status, self.calls = status, 0
 
     def verify_peer(self, connection_context, *, audience, now):
         self.calls += 1
         return PeerEvidence(
-            status=self.status,
-            transport="unix_domain_socket",
-            principal_ref="principal_ref_opaque",
-            audience=audience,
+            status=self.status, transport="unix_domain_socket",
+            principal_ref="principal_ref_opaque", audience=audience,
             channel_binding_ref="channel_ref_opaque",
             authenticated_at=now - timedelta(seconds=5),
-            expires_at=now + timedelta(minutes=1),
-            source="test_verifier",
+            expires_at=now + timedelta(minutes=1), source="test_verifier",
         )
 
 
@@ -50,10 +46,8 @@ class DurableAuditedDispatcherTests(unittest.TestCase):
 
     def request(self, method="host.health.read"):
         return json.dumps({
-            "schema_version": "1.0",
-            "request_id": REQUEST_ID,
-            "method": method,
-            "params": {},
+            "schema_version": "1.0", "request_id": REQUEST_ID,
+            "method": method, "params": {},
         }).encode()
 
     def dispatch(self, raw=None, *, store=None, authenticator=None, **kwargs):
@@ -63,9 +57,7 @@ class DurableAuditedDispatcherTests(unittest.TestCase):
             connection_context=object(),
             store=self.store if store is None else store,
             event_id=kwargs.pop("event_id", "evt_0000000000000001"),
-            occurred_at=NOW,
-            now=NOW,
-            **kwargs,
+            occurred_at=NOW, now=NOW, **kwargs,
         )
 
     def test_success_is_persisted_and_survives_new_store_instance(self):
@@ -74,14 +66,11 @@ class DurableAuditedDispatcherTests(unittest.TestCase):
         self.assertTrue(response["audit_recorded"])
         self.assertEqual(len(ledger.events), 1)
         self.assertTrue(verify_ledger(ledger))
-        reloaded = SQLiteAuditStore(self.path).load()
-        self.assertEqual(reloaded, ledger)
+        self.assertEqual(SQLiteAuditStore(self.path).load(), ledger)
 
     def test_second_dispatch_loads_and_extends_persisted_ledger(self):
         _, first = self.dispatch()
-        response, second = self.dispatch(
-            event_id="evt_0000000000000002",
-        )
+        response, second = self.dispatch(event_id="evt_0000000000000002")
         self.assertEqual(response["status"], "OK")
         self.assertEqual(len(first.events), 1)
         self.assertEqual(len(second.events), 2)
@@ -89,36 +78,31 @@ class DurableAuditedDispatcherTests(unittest.TestCase):
 
     def test_denied_peer_is_still_durably_audited(self):
         response, ledger = self.dispatch(
-            authenticator=VerifiedAuthenticator(status="UNKNOWN"),
-        )
+            authenticator=VerifiedAuthenticator(status="UNKNOWN"))
         self.assertEqual(response["status"], "DENIED")
         self.assertTrue(response["audit_recorded"])
         self.assertEqual(ledger.events[0].actor_ref, "peer_unknown")
         self.assertEqual(ledger.events[0].result, "NOT_RUN")
 
     def test_invalid_envelope_is_durably_audited_without_peer_call(self):
-        authenticator = VerifiedAuthenticator()
-        response, ledger = self.dispatch(raw=b"{", authenticator=authenticator)
+        auth = VerifiedAuthenticator()
+        response, ledger = self.dispatch(raw=b"{", authenticator=auth)
         self.assertEqual(response["status"], "INVALID_REQUEST")
         self.assertTrue(response["audit_recorded"])
-        self.assertEqual(authenticator.calls, 0)
+        self.assertEqual(auth.calls, 0)
         self.assertEqual(ledger.events[0].action, "request_rejected")
 
     def test_unreadable_store_prevents_dispatch(self):
         uninitialized = SQLiteAuditStore(
-            Path(self.temp_dir.name) / "not_initialized.sqlite3"
-        )
-        authenticator = VerifiedAuthenticator()
-        calls = []
+            Path(self.temp_dir.name) / "not_initialized.sqlite3")
+        auth, calls = VerifiedAuthenticator(), []
         response, ledger = self.dispatch(
-            store=uninitialized,
-            authenticator=authenticator,
-            diagnostics_provider=lambda: calls.append(True) or {},
-        )
+            store=uninitialized, authenticator=auth,
+            diagnostics_provider=lambda: calls.append(True) or {})
         self.assertEqual(response["status"], "AUDIT_UNAVAILABLE")
         self.assertFalse(response["audit_recorded"])
         self.assertIsNone(ledger)
-        self.assertEqual(authenticator.calls, 0)
+        self.assertEqual(auth.calls, 0)
         self.assertEqual(calls, [])
 
     def test_persistence_failure_suppresses_read_result(self):
@@ -128,13 +112,9 @@ class DurableAuditedDispatcherTests(unittest.TestCase):
         self.assertNotIn("result", response)
         self.assertEqual(ledger, AuditLedger())
 
-    def test_failed_append_does_not_claim_durable_audit(self):
-        response, _ = self.dispatch(
-            store=BrokenStore(),
-            raw=b"{",
-        )
+    def test_failed_append_of_invalid_envelope_is_not_claimed(self):
+        response, _ = self.dispatch(store=BrokenStore(), raw=b"{")
         self.assertEqual(response["status"], "AUDIT_PERSISTENCE_FAILED")
-        self.assertNotIn("audit_recorded", response.keys() - {"audit_recorded"})
         self.assertFalse(response["audit_recorded"])
 
 
