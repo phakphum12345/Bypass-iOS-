@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/contracts/decision_contract.dart';
 import '../../core/models/decision_request.dart';
 import '../../core/services/decision_service.dart';
+import '../../app/navigation.dart';
 import 'widgets/decision_card.dart';
 import 'widgets/device_card.dart';
 import 'widgets/security_gate_card.dart';
@@ -178,11 +179,8 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ],
             const SizedBox(height: 24),
-
             const DeviceCard(),
-
             const SizedBox(height: 16),
-
             Row(
               children: [
                 Expanded(
@@ -210,9 +208,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
-
             Row(
               children: [
                 Expanded(
@@ -234,13 +230,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
             ),
-
             const SizedBox(height: 24),
-
             DecisionCard(response: response),
-
             const SizedBox(height: 24),
-
             Row(
               children: [
                 FilledButton.icon(
@@ -267,6 +259,13 @@ class _DashboardPageState extends State<DashboardPage> {
               },
               icon: const Icon(Icons.health_and_safety_outlined),
               label: const Text('Recovery Assistant'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context)
+                  .pushNamed(AppNavigation.researchOsAuditRoute),
+              icon: const Icon(Icons.hub_outlined),
+              label: const Text('Research OS Audit Connector'),
             ),
           ],
         ),
