@@ -1,6 +1,6 @@
 # Release and installation guide
 
-This repository is a defensive Flutter architecture reference. Release artifacts package the reference UI only; they do not unlock devices, remove Activation Lock, bypass passcodes or MDM, or grant authorization/entitlements.
+**Production status: NOT PRODUCTION READY.** This repository is a defensive Flutter architecture reference. Release artifacts package the reference UI only; they do not unlock devices, remove Activation Lock, bypass passcodes or MDM, or grant authorization/entitlements.
 
 ## Supported CI release targets
 
@@ -33,6 +33,10 @@ The Linux bundle is built on Ubuntu x64. The target machine needs compatible Lin
 3. This artifact is for the iOS Simulator only. It is unsigned and cannot be installed directly on a physical iPhone or iPad.
 
 A physical-device build requires an Apple signing certificate, provisioning profile, and a configured signing workflow. Do not upload signing certificates or provisioning secrets into source files.
+
+## Production deployment boundary
+
+The current backend is a development-only loopback service and must not be exposed directly to the public internet. No production hosting, TLS ingress, managed secret store, trusted identity/ownership providers, tenant-isolated persistence, durable audit service, or signed physical-device iOS distribution is established. Review `docs/phase-7/production-readiness.md`, `docs/phase-7/threat-model.md`, and `docs/release/production-gate.md` before any production proposal. A completed checklist is not proof; every control requires independently verifiable evidence and explicit release approval.
 
 ## Verification boundaries
 
