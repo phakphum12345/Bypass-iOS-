@@ -13,6 +13,7 @@ void main() {
     final httpClient = MockClient((request) async {
       expect(request.method, 'GET');
       expect(request.url.path, '/v1/audit/inspection');
+      expect(request.headers['authorization'], 'Bearer read-only-test-token');
       return http.Response(jsonEncode({
         'status': 'PASS',
         'ledger_event_count': 3,
@@ -34,8 +35,12 @@ void main() {
     expect(find.text('NOT CONNECTED'), findsOneWidget);
 
     await tester.enterText(
-      find.byType(TextField).first,
+      find.byType(TextField).at(0),
       'https://research.example.test',
+    );
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      'read-only-test-token',
     );
     await tester.tap(find.text('Test & Inspect'));
     await tester.pumpAndSettle();
@@ -50,6 +55,8 @@ void main() {
 
     expect(find.text('NOT CONNECTED'), findsOneWidget);
     expect(find.text('Never'), findsOneWidget);
+    expect(tester.widget<TextField>(find.byType(TextField).at(0)).controller!.text, isEmpty);
+    expect(tester.widget<TextField>(find.byType(TextField).at(1)).controller!.text, isEmpty);
     httpClient.close();
   });
 }
