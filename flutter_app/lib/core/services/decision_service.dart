@@ -83,6 +83,19 @@ class DecisionService {
         'Decision API response must be a JSON object. No permission is granted.',
       );
     }
+    const requiredFields = {
+      'correlation_id',
+      'decision',
+      'authorization',
+      'entitlement',
+    };
+    const allowedFields = {...requiredFields, 'reason'};
+    if (!decoded.keys.toSet().containsAll(requiredFields) ||
+        decoded.keys.any((key) => !allowedFields.contains(key))) {
+      throw const DecisionApiException(
+        'Decision API response fields did not match the contract. No permission is granted.',
+      );
+    }
     if (decoded['correlation_id'] != request.correlationId) {
       throw const DecisionApiException(
         'Decision API correlation ID mismatch. No permission is granted.',
