@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
+
+from backend.device_intelligence import build_diagnostic_report
 
 MAX_BODY_BYTES = 64 * 1024
 REQUIRED_FIELDS = ("correlation_id", "device_id", "service_id", "action")
@@ -62,10 +65,21 @@ class DecisionHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        if self.path != "/health":
-            self._send(404, {"error": "not_found"})
+        if self.path == "/health":
+            self._send(200, {"status": "ok", "decision_mode": "deny_only"})
             return
-        self._send(200, {"status": "ok", "decision_mode": "deny_only"})
+
+        match = re.fullmatch("/v1/devices/([^/]+)/diagnostics", self.path)
+        if match:
+            try:
+                report = build_diagnostic_report(match.group(1))
+            except ValueError as error:
+                self._send(400, {"error": str(error)})
+                return
+            self._send(200, report)
+            return
+
+        self._send(404, {"error": "not_found"})
 
     def do_POST(self) -> None:
         if self.path != "/v1/decisions":
