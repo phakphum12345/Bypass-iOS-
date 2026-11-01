@@ -67,7 +67,7 @@ void main() {
     );
 
     final report = await client.inspect(
-      baseUrl: 'http://127.0.0.1:8788',
+      baseUrl: 'http://localhost',
     );
 
     expect(report.status, 'UNKNOWN');
