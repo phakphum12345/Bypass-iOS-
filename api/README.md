@@ -1,9 +1,8 @@
-﻿# API Contracts
+# API Contracts
 
 The API is the authoritative security boundary.
 
 The Flutter external tool sends requests and displays authoritative results.
-
 The client must not manufacture authorization, entitlement, or execution
 permission.
 
@@ -11,17 +10,31 @@ permission.
 
 A workflow may proceed only when:
 
+```
 Authorization == ALLOWED
 AND
 Entitlement == ACTIVE
+AND
+Decision == ALLOWED
+```
 
-Otherwise the authoritative result is DENY.
+Otherwise the authoritative result is DENY. Missing, invalid, conflicting,
+expired, or unknown security state must fail closed.
 
 ## Correlation
 
 Every decision request and response must support correlation through a
-correlation_id.
+correlation_id. The client rejects a response whose correlation_id does not
+match the originating request.
 
 ## Evidence
 
-Authoritative evidence is produced or validated by the server.
+Authoritative evidence is produced or validated by the server. Client-provided
+evidence is not authoritative.
+
+## Phase 1 implementation status
+
+The development API scaffold is in `backend/decision_api`. It is loopback-only
+and deny-only until trusted server-side identity, policy, authorization, and
+entitlement providers exist. It does not execute device operations. See
+`backend/README.md` for local startup and configuration.

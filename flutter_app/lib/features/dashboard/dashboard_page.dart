@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/contracts/decision_contract.dart';
+import '../../core/models/decision_request.dart';
 import '../../core/services/decision_service.dart';
 import 'widgets/decision_card.dart';
 import 'widgets/device_card.dart';
@@ -15,9 +16,13 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  final DecisionService _decisionService = const DecisionService();
+  final DecisionService _decisionService = DecisionService();
+  final TextEditingController _deviceReferenceController =
+      TextEditingController();
 
   DecisionResponse? _response;
+  String? _apiError;
+  bool _isRequesting = false;
 
   void _evaluateDecision() {
     // Demo fixture only. This does not call a server or inspect a device.
@@ -31,7 +36,51 @@ class _DashboardPageState extends State<DashboardPage> {
 
     setState(() {
       _response = response;
+      _apiError = null;
     });
+  }
+
+  Future<void> _requestServerDecision() async {
+    final deviceReference = _deviceReferenceController.text.trim();
+    if (deviceReference.isEmpty) {
+      setState(() {
+        _apiError = 'Enter a non-sensitive opaque device reference.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isRequesting = true;
+      _apiError = null;
+    });
+
+    final request = DecisionRequest(
+      correlationId: DateTime.now().microsecondsSinceEpoch.toString(),
+      deviceId: deviceReference,
+      serviceId: 'diagnostics',
+      action: 'inspect',
+    );
+
+    try {
+      final response = await _decisionService.requestDecision(request);
+      if (!mounted) return;
+      setState(() {
+        _response = response;
+        _apiError = null;
+      });
+    } on DecisionApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _apiError = error.message;
+        _response = null;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRequesting = false;
+        });
+      }
+    }
   }
 
   void _viewEvidence() {
@@ -41,8 +90,8 @@ class _DashboardPageState extends State<DashboardPage> {
         title: const Text('Evidence'),
         content: Text(
           _response == null
-              ? 'No demo decision has been loaded.'
-              : 'Demo correlation ID: ${_response!.correlationId}\n'
+              ? 'No decision response has been loaded.'
+              : 'Correlation ID: ${_response!.correlationId}\n'
                   'Decision: ${_response!.decision.decision.name}\n'
                   'Reason: ${_response!.decision.reason}',
         ),
@@ -54,6 +103,13 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _deviceReferenceController.dispose();
+    _decisionService.close();
+    super.dispose();
   }
 
   @override
@@ -82,9 +138,45 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Prototype dashboard. No live device or server checks are connected.',
+              'No live device inspection is connected. Server decisions are '
+              'available only when DECISION_API_BASE_URL is configured.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _deviceReferenceController,
+              decoration: const InputDecoration(
+                labelText: 'Opaque device reference',
+                helperText:
+                    'Do not enter a serial number, UDID, passcode, or account credential.',
+                border: OutlineInputBorder(),
+              ),
+              textInputAction: TextInputAction.done,
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                onPressed: _isRequesting ? null : _requestServerDecision,
+                icon: _isRequesting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cloud_outlined),
+                label: Text(
+                  _isRequesting ? 'Requesting...' : 'Request Server Decision',
+                ),
+              ),
+            ),
+            if (_apiError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _apiError!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
             const SizedBox(height: 24),
 
             const DeviceCard(),
