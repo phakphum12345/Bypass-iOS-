@@ -65,6 +65,40 @@ void main() {
     service.close();
   });
 
+  test('rejects incomplete decision response fields', () async {
+    final service = DecisionService(
+      baseUrl: 'https://api.example.test',
+      client: MockClient((_) async => http.Response(jsonEncode({
+        'correlation_id': 'corr-test',
+        'decision': 'DENY',
+        'authorization': 'DENY',
+      }), 200)),
+    );
+    await expectLater(
+      service.requestDecision(request),
+      throwsA(isA<DecisionApiException>()),
+    );
+    service.close();
+  });
+
+  test('rejects unexpected decision response fields', () async {
+    final service = DecisionService(
+      baseUrl: 'https://api.example.test',
+      client: MockClient((_) async => http.Response(jsonEncode({
+        'correlation_id': 'corr-test',
+        'decision': 'DENY',
+        'authorization': 'DENY',
+        'entitlement': 'UNKNOWN',
+        'client_override': true,
+      }), 200)),
+    );
+    await expectLater(
+      service.requestDecision(request),
+      throwsA(isA<DecisionApiException>()),
+    );
+    service.close();
+  });
+
   test('rejects malformed JSON', () async {
     final service = DecisionService(
       baseUrl: 'https://api.example.test',
