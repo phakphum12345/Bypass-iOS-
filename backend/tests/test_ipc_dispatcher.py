@@ -161,7 +161,7 @@ class LocalIPCDispatcherTests(unittest.TestCase):
             now=NOW,
         )
         self.assertEqual(response["status"], "INVALID_REQUEST")
-        self.assertEqual(authenticator.calls, [])
+        self.assertEqual(authenticator.calls, 0)
 
 
 if __name__ == "__main__":
