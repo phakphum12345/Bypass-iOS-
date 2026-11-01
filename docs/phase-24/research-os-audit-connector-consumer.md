@@ -11,7 +11,7 @@ the intended API provider.
 The Research OS Connector page provides:
 
 - Research OS HTTPS API base URL input.
-- Optional bearer credential input, held in screen memory only.
+- Scoped bearer credential input, held in screen memory only.
 - A connection test that calls the audit inspection resource.
 - PASS / FAIL / UNKNOWN result display and redacted summary fields.
 - Last-checked timestamp and Disconnect action.
@@ -24,7 +24,8 @@ page state. No credential is persisted, logged, or placed in a URL.
 - Method: GET
 - Path: /v1/audit/inspection
 - Accept: application/json
-- Optional authorization header: Authorization: Bearer <scoped-read-only-credential>
+- Authorization: Bearer <scoped-read-only-credential> for remote HTTPS hosts.
+- Authentication may be omitted only for loopback development.
 - Response status: HTTP 200 for an inspection report; HTTP 503 may return an
   UNKNOWN report when inspection is unavailable or not configured.
 - Report fields: status (PASS / FAIL / UNKNOWN), reason,
