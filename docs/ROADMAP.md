@@ -10,17 +10,21 @@ Build a defensive iOS/iPadOS Device Diagnostics, Ownership, Authorized Recovery,
 |---|---|---|
 | 1. Decision API Spine | Loopback-only deny-only API, Flutter client, strict contracts | API and Flutter tests pass; no client-supplied authorization; CI green |
 | 2. Device Intelligence | Opaque device registry references, read-only diagnostic report contract, evidence provenance, conservative UNKNOWN/NOT_INSPECTED states | Unit/API tests; no device writes; no sensitive identifiers; platform/security states never inferred |
-| 3. Identity & Ownership | Authentication, verified device-owner relationship, delegated organization scope, technician identities | Trusted provider, session security, revocation, negative tests, audit evidence |
+| 3. Identity & Ownership | Trusted authentication provider contract, verified device-owner relationship, delegated organization scope, technician identities | Production-grade trusted provider, secure sessions, revocation, ownership evidence, negative tests, audit evidence |
 | 4. Consent, Policy & Entitlement | Scoped consent, policy evaluation, entitlement lifecycle, separation of duties | Server-only decisions; expiry/revocation tests; deny-by-default |
 | 5. Authorized Recovery | Guided Apple-supported recovery and organization-authorized management workflows | Official supported procedures only; explicit confirmation; data-loss warnings; tested rollback/stop conditions |
 | 6. Audit & Evidence | Append-only audit events, evidence integrity, retention/export, privacy controls | Tamper-evidence tests, access controls, retention and export validation |
 | 7. Production & Enterprise | Hardened deployment, TLS, secrets, backups, tenant isolation, monitoring, incident response | Threat model, security review, restore drill, operational runbooks, production acceptance |
 
+## Delivery status
+
+- Phase 1: merged to main via PR #11.
+- Phase 2: merged to main via PR #12.
+- Phase 3: in progress; this phase begins with a fail-closed identity-provider contract only. No production authentication, ownership verification, or authorization provider is enabled.
+
 ## Dependency order
 
-Phase 2 is stacked on the unmerged Phase 1 PR. It does not target main directly because the decision API foundation is not merged yet. Merge Phase 1 first, then retarget/rebase Phase 2 onto main after review.
-
-Phase 3 must not grant authority based on device connection or an opaque reference. Phase 4 must not return ALLOW until identity, ownership, consent, policy, and entitlement providers are independently verified. Phase 5 is limited to documented, authorized platform recovery and management paths.
+Phase 3 must not grant authority based on device connection, an opaque reference, repository ownership, or client-supplied claims. The current default identity provider is unavailable, so identity remains UNKNOWN. Phase 4 must not return ALLOW until identity, ownership, consent, policy, and entitlement providers are independently verified. Phase 5 is limited to documented, authorized platform recovery and management paths.
 
 ## Release gates
 
