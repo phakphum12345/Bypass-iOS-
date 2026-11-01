@@ -7,6 +7,7 @@ import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
+from backend.audit_inspection import inspect_audit_database, report_as_dict
 from backend.device_intelligence import build_diagnostic_report
 from backend.host_diagnostics import collect_host_diagnostics
 
@@ -72,6 +73,20 @@ class DecisionHandler(BaseHTTPRequestHandler):
 
         if self.path == "/v1/host/diagnostics":
             self._send(200, collect_host_diagnostics())
+            return
+
+        if self.path == "/v1/audit/inspection":
+            database_path = os.environ.get("DECISION_API_AUDIT_DATABASE", "").strip()
+            if not database_path:
+                self._send(503, {
+                    "status": "UNKNOWN",
+                    "reason": "audit_inspection_not_configured",
+                    "external_anchor_status": "UNKNOWN",
+                    "storage_trust": "UNVERIFIED_LOCAL_DATABASE",
+                })
+                return
+            report = inspect_audit_database(database_path)
+            self._send(200, report_as_dict(report))
             return
 
         match = re.fullmatch("/v1/devices/([^/]+)/diagnostics", self.path)
