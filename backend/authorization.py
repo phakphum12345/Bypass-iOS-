@@ -1,11 +1,7 @@
 """Phase 4 server-side consent, policy and entitlement evaluation contracts.
 
-This module is a pure evaluator, not an HTTP endpoint or execution engine.
-Evidence objects must be produced by trusted server-side providers; callers
-must never construct them from client-submitted claims. Missing providers,
-untrusted/incomplete evidence, stale timestamps, and scope mismatches fail
-closed. A successful result means only that the request is eligible for a
-separate authorization/confirmation workflow; it never performs an operation.
+Pure evaluator only: no HTTP route, provider integration, or device execution.
+Evidence must come from trusted server-side providers, never client claims.
 """
 from __future__ import annotations
 
@@ -17,8 +13,6 @@ from backend.identity import IdentityEvidence
 
 @dataclass(frozen=True)
 class OwnershipEvidence:
-    """Trusted ownership-provider result; references are opaque and non-secret."""
-
     status: str
     ownership_ref: str | None = None
     subject_ref: str | None = None
@@ -29,8 +23,6 @@ class OwnershipEvidence:
 
 @dataclass(frozen=True)
 class ConsentEvidence:
-    """Explicit, action-specific, revocable device-owner consent."""
-
     status: str
     consent_ref: str | None = None
     subject_ref: str | None = None
@@ -43,8 +35,6 @@ class ConsentEvidence:
 
 @dataclass(frozen=True)
 class PolicyEvidence:
-    """Organization/device policy snapshot returned by a trusted policy source."""
-
     status: str
     policy_ref: str | None = None
     device_ref: str | None = None
@@ -55,8 +45,6 @@ class PolicyEvidence:
 
 @dataclass(frozen=True)
 class EntitlementEvidence:
-    """Server-verified product/service entitlement; never a client plan flag."""
-
     status: str
     entitlement_ref: str | None = None
     subject_ref: str | None = None
@@ -80,15 +68,16 @@ def _aware(value: datetime | None) -> bool:
     )
 
 
-def _window_is_current(
+def _window_state(
     starts_at: datetime | None, ends_at: datetime | None, now: datetime
-) -> bool:
-    return (
-        _aware(starts_at)
-        and _aware(ends_at)
-        and starts_at <= now < ends_at
-        and ends_at > starts_at
-    )
+) -> str:
+    if not _aware(starts_at) or not _aware(ends_at) or ends_at <= starts_at:
+        return "UNKNOWN"
+    if ends_at <= now:
+        return "EXPIRED"
+    if starts_at > now:
+        return "NOT_YET_VALID"
+    return "CURRENT"
 
 
 def _unknown(reason: str) -> AuthorizationDecision:
@@ -113,85 +102,131 @@ def evaluate_authorization(
 ) -> AuthorizationDecision:
     """Evaluate independent server-side evidence for one exact scoped request.
 
-    No request-body roles, ownership flags, consent booleans, policy overrides,
-    or entitlement claims are accepted. The existing Decision API intentionally
-    remains deny-only and does not call this evaluator.
+    ALLOW means eligible for a separate human-review/confirmation stage only.
+    The live Decision API intentionally remains deny-only and never calls this.
     """
-    current = now or datetime.now(timezone.utc)
+    current = now if now is not None else datetime.now(timezone.utc)
     if not _aware(current):
         return _unknown("invalid_evaluation_time")
-    if any(not isinstance(value, str) or not value.strip()
-           for value in (device_ref, action, service_id)):
+    if any(
+        not isinstance(value, str) or not value.strip()
+        for value in (device_ref, action, service_id)
+    ):
         return _unknown("invalid_request_scope")
 
-    if identity is None or identity.status != "VERIFIED":
-        if identity is not None and identity.status in {"REVOKED", "EXPIRED"}:
-            return _deny("identity_not_active")
+    if not isinstance(identity, IdentityEvidence):
+        return _unknown("identity_not_verified")
+    if identity.status in {"REVOKED", "EXPIRED"}:
+        return _deny("identity_not_active")
+    if identity.status != "VERIFIED":
         return _unknown("identity_not_verified")
     subject_ref = identity.subject_ref
-    if not isinstance(subject_ref, str) or not subject_ref.strip():
-        return _unknown("identity_subject_missing")
-    if not _window_is_current(identity.issued_at, identity.expires_at, current):
+    if any(
+        not isinstance(value, str) or not value.strip()
+        for value in (identity.issuer, subject_ref, identity.session_ref)
+    ):
+        return _unknown("identity_evidence_incomplete")
+    identity_window = _window_state(identity.issued_at, identity.expires_at, current)
+    if identity_window == "EXPIRED":
+        return _deny("identity_session_expired")
+    if identity_window != "CURRENT":
         return _unknown("identity_session_not_current")
-    if not _aware(identity.auth_time) or identity.auth_time > current:
+    if (
+        not _aware(identity.auth_time)
+        or identity.auth_time > current
+        or identity.auth_time < identity.issued_at
+    ):
         return _unknown("identity_authentication_time_invalid")
 
-    if ownership is None or ownership.status != "VERIFIED":
-        if ownership is not None and ownership.status in {"DENIED", "REVOKED", "EXPIRED"}:
-            return _deny("device_ownership_not_verified")
+    if not isinstance(ownership, OwnershipEvidence):
         return _unknown("device_ownership_unknown")
+    if ownership.status in {"DENIED", "REVOKED", "EXPIRED"}:
+        return _deny("device_ownership_not_verified")
+    if ownership.status != "VERIFIED":
+        return _unknown("device_ownership_unknown")
+    ownership_window = _window_state(
+        ownership.valid_from, ownership.valid_until, current
+    )
+    if ownership_window == "EXPIRED":
+        return _deny("device_ownership_expired")
+    if ownership_window != "CURRENT":
+        return _unknown("device_ownership_not_current")
     if (
         ownership.subject_ref != subject_ref
         or ownership.device_ref != device_ref
-        or not ownership.ownership_ref
-        or not _window_is_current(ownership.valid_from, ownership.valid_until, current)
+        or not isinstance(ownership.ownership_ref, str)
+        or not ownership.ownership_ref.strip()
     ):
-        return _unknown("device_ownership_scope_or_validity_mismatch")
+        return _unknown("device_ownership_scope_mismatch")
 
-    if consent is None or consent.status != "GRANTED":
-        if consent is not None and consent.status in {"REVOKED", "EXPIRED", "DENIED"}:
-            return _deny("consent_not_active")
+    if not isinstance(consent, ConsentEvidence):
+        return _unknown("consent_not_verified")
+    if consent.status in {"REVOKED", "EXPIRED", "DENIED"}:
+        return _deny("consent_not_active")
+    if consent.status != "GRANTED":
         return _unknown("consent_not_verified")
     if consent.revoked_at is not None:
         return _deny("consent_revoked")
+    consent_window = _window_state(consent.granted_at, consent.expires_at, current)
+    if consent_window == "EXPIRED":
+        return _deny("consent_expired")
+    if consent_window != "CURRENT":
+        return _unknown("consent_not_current")
     if (
         consent.subject_ref != subject_ref
         or consent.device_ref != device_ref
         or consent.action != action
-        or not consent.consent_ref
-        or not _window_is_current(consent.granted_at, consent.expires_at, current)
+        or not isinstance(consent.consent_ref, str)
+        or not consent.consent_ref.strip()
     ):
-        return _unknown("consent_scope_or_validity_mismatch")
+        return _deny("consent_scope_mismatch")
 
-    if policy is None or policy.status != "ACTIVE":
-        if policy is not None and policy.status in {"DENY", "REVOKED", "EXPIRED"}:
-            return _deny("policy_denies_request")
+    if not isinstance(policy, PolicyEvidence):
         return _unknown("policy_not_verified")
+    if policy.status in {"DENY", "REVOKED", "EXPIRED"}:
+        return _deny("policy_denies_request")
+    if policy.status != "ACTIVE":
+        return _unknown("policy_not_verified")
+    policy_window = _window_state(policy.valid_from, policy.valid_until, current)
+    if policy_window in {"EXPIRED", "NOT_YET_VALID"}:
+        return _deny("policy_not_active")
+    if policy_window != "CURRENT":
+        return _unknown("policy_validity_unknown")
     if (
         policy.device_ref != device_ref
+        or not isinstance(policy.permitted_actions, tuple)
+        or any(not isinstance(item, str) for item in policy.permitted_actions)
         or action not in policy.permitted_actions
-        or not policy.policy_ref
-        or not _window_is_current(policy.valid_from, policy.valid_until, current)
+        or not isinstance(policy.policy_ref, str)
+        or not policy.policy_ref.strip()
     ):
         return _deny("policy_scope_or_action_denied")
 
-    if entitlement is None or entitlement.status != "ACTIVE":
-        if entitlement is not None and entitlement.status in {
-            "INACTIVE", "EXPIRED", "REVOKED", "DENIED"
-        }:
-            return _deny("entitlement_not_active")
+    if not isinstance(entitlement, EntitlementEvidence):
         return _unknown("entitlement_not_verified")
+    if entitlement.status in {"INACTIVE", "EXPIRED", "REVOKED", "DENIED"}:
+        return _deny("entitlement_not_active")
+    if entitlement.status != "ACTIVE":
+        return _unknown("entitlement_not_verified")
+    entitlement_window = _window_state(
+        entitlement.valid_from, entitlement.valid_until, current
+    )
+    if entitlement_window in {"EXPIRED", "NOT_YET_VALID"}:
+        return _deny("entitlement_not_active")
+    if entitlement_window != "CURRENT":
+        return _unknown("entitlement_validity_unknown")
     if (
         entitlement.subject_ref != subject_ref
         or entitlement.service_id != service_id
-        or not entitlement.entitlement_ref
-        or not _window_is_current(
-            entitlement.valid_from, entitlement.valid_until, current
-        )
+        or not isinstance(entitlement.entitlement_ref, str)
+        or not entitlement.entitlement_ref.strip()
     ):
-        return _deny("entitlement_scope_or_validity_mismatch")
+        return _deny("entitlement_scope_mismatch")
 
     return AuthorizationDecision(
         status="ALLOW",
-        reason="All required server-side evidence is current and scope-matched; no operation was executed.",
+        reason=(
+            "All required server-side evidence is current and scope-matched; "
+            "eligible for separate review only. No operation was executed."
+        ),
     )
