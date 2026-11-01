@@ -45,9 +45,11 @@ class LocalIPCContractTests(unittest.TestCase):
                 with self.assertRaises(IPCContractError):
                     validate_request(value)
 
-    def test_rejects_unknown_method_and_nonempty_params(self):
-        with self.assertRaisesRegex(IPCContractError, "method_not_allowed"):
-            validate_request(self.request(method="device.unlock"))
+    def test_rejects_unknown_and_non_string_methods_and_nonempty_params(self):
+        for method in ("device.unlock", ["host.health.read"], None):
+            with self.subTest(method=method):
+                with self.assertRaisesRegex(IPCContractError, "method_not_allowed"):
+                    validate_request(self.request(method=method))
         with self.assertRaisesRegex(IPCContractError, "params_must_be_empty_object"):
             validate_request(self.request(params={"verbose": True}))
 
