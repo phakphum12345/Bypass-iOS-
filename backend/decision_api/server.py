@@ -115,8 +115,8 @@ class DecisionHandler(BaseHTTPRequestHandler):
         self._send(200, evaluate_decision(payload))
 
     def log_message(self, format: str, *args: Any) -> None:
-        # Request bodies and identifiers are never logged.
-        super().log_message(format, *args)
+        # Do not log request paths: the diagnostics route contains an opaque device reference.
+        return
 
 
 def main() -> None:
