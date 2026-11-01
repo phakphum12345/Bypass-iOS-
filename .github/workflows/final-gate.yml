@@ -62,9 +62,9 @@ jobs:
           set -euo pipefail
           grep -q "NOT PRODUCTION READY" docs/phase-7/production-readiness.md
           grep -q "deny-only" docs/phase-7/production-readiness.md
-          grep -q "UNKNOWN blocks production release" docs/release/production-gate.md
+          grep -q "Any applicable FAIL, SKIPPED, or UNKNOWN blocks production release." docs/release/production-gate.md
           grep -q "Cross-tenant data access" docs/phase-7/threat-model.md
-          grep -q "does not deploy" docs/phase-7/production-readiness.md
+          grep -q "does not enable deployment" docs/phase-7/production-readiness.md
 
       - name: Validate security boundary
         shell: bash
