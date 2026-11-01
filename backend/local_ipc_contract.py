@@ -46,12 +46,11 @@ def validate_request(payload: Any) -> dict[str, Any]:
     if not isinstance(request_id, str) or not _REQUEST_ID.fullmatch(request_id):
         raise IPCContractError("invalid_request_id")
     method = payload["method"]
-    if method not in _ALLOWED_METHODS:
+    if not isinstance(method, str) or method not in _ALLOWED_METHODS:
         raise IPCContractError("method_not_allowed")
     params = payload["params"]
     if not isinstance(params, dict) or params:
         raise IPCContractError("params_must_be_empty_object")
-    # Defence in depth if future contract revisions allow nested parameters.
     if _contains_forbidden_key(payload):
         raise IPCContractError("authority_or_device_fields_forbidden")
     return {
