@@ -1,4 +1,4 @@
-# Decision API, Device Diagnostics, Identity, Authorization, Recovery, and Audit Foundation (Phases 1–6)
+# Decision API, Device Diagnostics, Identity, Authorization, Recovery, and Audit Foundation (Phases 1–7)
 
 This is a development-only, loopback-bound API scaffold. The live decision API is deliberately **deny-only**: no production identity, ownership, consent, capability, policy, authorization, entitlement, or execution provider is enabled. A valid decision request returns decision=DENY, authorization=DENY, and entitlement=UNKNOWN. The server does not perform or trigger device operations.
 
@@ -9,6 +9,8 @@ Phase 4 adds backend.authorization, a pure evaluator requiring current, scope-ma
 Phase 5 adds backend.recovery_workflow, a pure informational planner for official Apple and organization-authorized recovery guidance. It does not connect to devices, inspect device state, execute commands, or grant authorization. Restore guidance warns about local data loss and unverified backup availability. Activation Lock and MDM are explicit security stops; no bypass/removal workflow exists.
 
 Phase 6 adds backend.audit_evidence, an immutable in-memory ledger contract with SHA-256 hash chaining, verification, redacted JSON export, and non-destructive retention candidate reporting. It is not connected to the HTTP API and has no database, durable append-only store, authenticated access control, tenant isolation, encryption-at-rest, or independently protected chain-head anchor. The hash chain is tamper-evident, not tamper-proof. Audit evidence never grants authorization or triggers an operation.
+
+Phase 7 documents production and enterprise readiness gates, a threat model, and evidence-based release requirements. It does not configure hosting, TLS termination, managed secrets, production identity, tenant isolation, durable audit persistence, signing, or deployment. The service remains development-only, loopback-bound, and deny-only. A green CI workflow is not production approval.
 
 ## Run
 

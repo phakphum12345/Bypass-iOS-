@@ -31,6 +31,9 @@ jobs:
             "docs/architecture/decision-pipeline.md"
             "docs/architecture/evidence-model.md"
             "docs/phase-6/audit-evidence.md"
+            "docs/phase-7/production-readiness.md"
+            "docs/phase-7/threat-model.md"
+            "docs/release/production-gate.md"
             "backend/audit_evidence.py"
             "backend/tests/test_audit_evidence.py"
             "docs/device/identity.md"
@@ -52,6 +55,16 @@ jobs:
               exit 1
             }
           done
+
+      - name: Validate production readiness boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "NOT PRODUCTION READY" docs/phase-7/production-readiness.md
+          grep -q "deny-only" docs/phase-7/production-readiness.md
+          grep -q "Any applicable FAIL, SKIPPED, or UNKNOWN blocks production release." docs/release/production-gate.md
+          grep -q "Cross-tenant data access" docs/phase-7/threat-model.md
+          grep -q "does not enable deployment" docs/phase-7/production-readiness.md
 
       - name: Validate security boundary
         shell: bash
