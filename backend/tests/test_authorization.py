@@ -80,10 +80,11 @@ class AuthorizationEvidenceTests(unittest.TestCase):
         self.assertEqual(result.status, "ALLOW")
         self.assertFalse(result.operation_performed)
 
-    def test_missing_provider_evidence_is_unknown(self):
+    def test_missing_or_malformed_provider_evidence_is_unknown(self):
         for key in ("identity", "ownership", "consent", "policy", "entitlement"):
             with self.subTest(key=key):
                 self.assertEqual(evaluate(**{key: None}).status, "UNKNOWN")
+                self.assertEqual(evaluate(**{key: object()}).status, "UNKNOWN")
 
     def test_identity_must_be_verified_and_current(self):
         values = evidence_set()
@@ -99,20 +100,24 @@ class AuthorizationEvidenceTests(unittest.TestCase):
             evaluate(identity=replace(
                 values["identity"], expires_at=NOW - timedelta(seconds=1)
             )).status,
+            "DENY",
+        )
+        self.assertEqual(
+            evaluate(identity=replace(values["identity"], session_ref=None)).status,
             "UNKNOWN",
         )
 
     def test_ownership_must_match_subject_device_and_time(self):
         values = evidence_set()
         cases = (
-            replace(values["ownership"], subject_ref="another_user"),
-            replace(values["ownership"], device_ref="another_device"),
-            replace(values["ownership"], valid_until=NOW),
-            replace(values["ownership"], status="UNKNOWN"),
+            (replace(values["ownership"], subject_ref="another_user"), "UNKNOWN"),
+            (replace(values["ownership"], device_ref="another_device"), "UNKNOWN"),
+            (replace(values["ownership"], valid_until=NOW), "DENY"),
+            (replace(values["ownership"], status="UNKNOWN"), "UNKNOWN"),
         )
-        for ownership in cases:
+        for ownership, expected in cases:
             with self.subTest(ownership=ownership):
-                self.assertEqual(evaluate(ownership=ownership).status, "UNKNOWN")
+                self.assertEqual(evaluate(ownership=ownership).status, expected)
 
     def test_consent_is_action_specific_time_bounded_and_revocable(self):
         values = evidence_set()
