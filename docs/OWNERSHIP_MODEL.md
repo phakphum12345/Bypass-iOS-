@@ -33,4 +33,7 @@ Ownership and delegated authority must be established by a future trusted provid
 
 ## Current implementation status
 
-This document defines the target model. Phase 1 has no production identity or ownership provider. Phase 2 adds read-only diagnostics and must not infer ownership from diagnostic results.
+- Phase 1 provides a loopback-only, deny-only decision API; it has no production identity or ownership provider.
+- Phase 2 provides read-only diagnostics; it does not infer ownership from diagnostic results.
+- Phase 3 introduces a server-side identity-provider contract and fail-closed session-evidence resolver. The default provider is unavailable; it does not authenticate users or verify device ownership.
+- Device ownership, organization membership, technician assignment, and authorization remain UNKNOWN until separate trusted providers and evidence workflows are implemented and reviewed.
