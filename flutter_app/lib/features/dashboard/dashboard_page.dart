@@ -91,8 +91,8 @@ class _DashboardPageState extends State<DashboardPage> {
         content: Text(
           _response == null
               ? 'No decision response has been loaded.'
-              : 'Correlation ID: ${_response!.correlationId}\\n'
-                  'Decision: ${_response!.decision.decision.name}\\n'
+              : 'Correlation ID: ${_response!.correlationId}\n'
+                  'Decision: ${_response!.decision.decision.name}\n'
                   'Reason: ${_response!.decision.reason}',
         ),
         actions: [
