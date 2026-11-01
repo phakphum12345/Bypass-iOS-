@@ -46,7 +46,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('PASS'), findsOneWidget);
-    expect(find.text('audit_consistent'), findsOneWidget);
+    expect(find.text('Reason: audit_consistent'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('UNKNOWN'), findsOneWidget);
 
