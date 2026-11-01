@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from backend.device_intelligence import build_diagnostic_report
+from backend.host_diagnostics import collect_host_diagnostics
 
 MAX_BODY_BYTES = 64 * 1024
 REQUIRED_FIELDS = ("correlation_id", "device_id", "service_id", "action")
@@ -67,6 +68,10 @@ class DecisionHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/health":
             self._send(200, {"status": "ok", "decision_mode": "deny_only"})
+            return
+
+        if self.path == "/v1/host/diagnostics":
+            self._send(200, collect_host_diagnostics())
             return
 
         match = re.fullmatch("/v1/devices/([^/]+)/diagnostics", self.path)
