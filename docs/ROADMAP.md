@@ -18,7 +18,7 @@ Build a defensive iOS/iPadOS Device Diagnostics, Ownership, Authorized Recovery,
 
 ## Delivery status
 
-- Phase 1: merged to main via PR #11 (merge commit ae5a79b2ee26a11d16e4d2033ff72a11b6811afc).
+- Phase 1: merged to main via PR #11 (merge commit 018ef65accbb7c050f62c88e0623e3b2120ad298).
 - Phase 2: merged to main via PR #12 (merge commit 45b53ec7d3d6f2da4578c9599f234f6b2b86afa4).
 - Phase 3: merged to main via PR #13 (merge commit ae5a79b2ee26a11d16e4d2033ff72a11b6811afc). It adds a fail-closed identity-provider contract only; no production authentication or ownership provider is enabled.
 - Phase 4: in progress on a separate PR. It adds a pure evidence evaluator and negative tests; no trusted providers or live authorization route are enabled.
