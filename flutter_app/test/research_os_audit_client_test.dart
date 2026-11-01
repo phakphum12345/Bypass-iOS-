@@ -42,6 +42,20 @@ void main() {
     client.close();
   });
 
+  test('requires a scoped credential for remote HTTPS connections', () async {
+    final client = ResearchOsAuditClient(
+      client: MockClient((_) async {
+        fail('An unauthenticated remote request must never be sent.');
+      }),
+    );
+
+    await expectLater(
+      client.inspect(baseUrl: 'https://research.example.test'),
+      throwsA(isA<ResearchOsApiException>()),
+    );
+    client.close();
+  });
+
   test('accepts an unavailable UNKNOWN response without inventing counts', () async {
     final client = ResearchOsAuditClient(
       client: MockClient((_) async => http.Response(jsonEncode({
@@ -53,7 +67,7 @@ void main() {
     );
 
     final report = await client.inspect(
-      baseUrl: 'https://research.example.test',
+      baseUrl: 'http://127.0.0.1:8788',
     );
 
     expect(report.status, 'UNKNOWN');
@@ -89,7 +103,7 @@ void main() {
       'https://research.example.test#fragment',
     ]) {
       await expectLater(
-        client.inspect(baseUrl: url),
+        client.inspect(baseUrl: url, bearerToken: 'read-only-secret'),
         throwsA(isA<ResearchOsApiException>()),
       );
     }
@@ -122,7 +136,10 @@ void main() {
     );
 
     await expectLater(
-      client.inspect(baseUrl: 'https://research.example.test'),
+      client.inspect(
+        baseUrl: 'https://research.example.test',
+        bearerToken: 'read-only-secret',
+      ),
       throwsA(isA<ResearchOsApiException>()),
     );
     client.close();
