@@ -145,6 +145,9 @@ jobs:
           print("API CONTRACT SEMANTICS: PASS")
           PY
 
+      - name: Backend API tests
+        run: python -m unittest discover -s backend/tests -v
+
       - name: Validate repository whitespace
         shell: bash
         run: |
