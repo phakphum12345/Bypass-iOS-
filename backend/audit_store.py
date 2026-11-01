@@ -6,6 +6,7 @@ against an administrator or attacker who can replace or rewrite the database.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import asdict
 import json
 import sqlite3
@@ -34,7 +35,7 @@ class SQLiteAuditStore:
 
     def initialize(self) -> None:
         try:
-            with self._connect(self.database_path) as connection:
+            with closing(self._connect(self.database_path)) as connection:
                 connection.execute("PRAGMA journal_mode=WAL")
                 connection.execute(
                     """CREATE TABLE IF NOT EXISTS audit_events (
