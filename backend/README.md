@@ -1,8 +1,8 @@
-# Decision API Spine (Phase 1)
+# Decision API and Device Diagnostics (Phases 1–2)
 
 This is a development-only, loopback-bound API scaffold. It is deliberately
 **deny-only**: no identity, capability, policy, authorization, entitlement,
-device registry, or execution provider is implemented. A valid request returns
+ownership, or execution provider is implemented. A valid request returns
 `decision=DENY`, `authorization=DENY`, and `entitlement=UNKNOWN`. The server
 does not perform or trigger device operations.
 
@@ -33,10 +33,12 @@ No wildcard CORS policy is enabled by default.
 - `POST /v1/decisions`: accepts exactly the four request fields in
   `api/contracts/decision-request.json`.
 - Client-supplied authorization or entitlement fields are rejected.
+- `GET /v1/devices/{opaque-reference}/diagnostics`: returns a versioned, read-only diagnostic report. With no trusted platform adapter configured, all device and connection attributes remain `UNKNOWN`; passcode, Activation Lock, MDM, and device-trust states are `NOT_INSPECTED`.
+- The diagnostics endpoint never establishes ownership, grants authorization, or performs a device operation.
 - `GET /v1/execute` and other execution routes do not exist.
 
 This scaffold is not production-ready and must not be exposed to the public
-internet. A production authorization provider, identity verification,
+internet. A trusted read-only device adapter, production authorization provider, identity verification,
 entitlement source, authentication, rate limiting, audit persistence, TLS,
 deployment target, and threat-model review are separate required work.
 Never send a device serial number, UDID, passcode, Apple Account credential,
