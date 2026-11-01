@@ -16,7 +16,7 @@ void main() {
     expect(find.text('Device Security Overview'), findsOneWidget);
     expect(find.text('Device Status'), findsOneWidget);
     expect(find.text('NOT CONNECTED'), findsOneWidget);
-    expect(find.text('Prototype dashboard. No live device or server checks are connected.'), findsOneWidget);
+    expect(find.text('No live device inspection is connected. Server decisions are available only when DECISION_API_BASE_URL is configured.'), findsOneWidget);
     expect(find.text('Identity'), findsOneWidget);
     expect(find.text('Capability'), findsOneWidget);
     expect(find.text('Policy'), findsOneWidget);
